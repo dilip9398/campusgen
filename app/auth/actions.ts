@@ -37,6 +37,7 @@ export async function sendSignupOtp(_previous: FormState, formData: FormData): P
       email,
       password,
       options: {
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/auth/callback?next=%2Fauth`,
         data: { birth_date: birthDate },
       },
     });
