@@ -181,6 +181,13 @@ as $$
          profile.relationship_vibes
   from public.profiles as profile
   where auth.uid() is not null
+    and exists (
+      select 1 from auth.users as campus_user
+      where campus_user.id = auth.uid()
+        and campus_user.email_confirmed_at is not null
+        and lower(campus_user.email) ~ '^[^[:space:]@]+@siddhartha\.co\.in$'
+    )
+    and exists (select 1 from public.profiles as own_profile where own_profile.id = auth.uid())
     and profile.id <> auth.uid()
     and (p_department is null or profile.major = p_department)
     and (p_vibe is null or p_vibe = any(profile.relationship_vibes))
@@ -208,6 +215,13 @@ begin
   if current_id is null or p_receiver_id is null or current_id = p_receiver_id then
     raise exception 'That profile cannot be liked.';
   end if;
+  if not exists (
+    select 1 from public.profiles as own_profile
+    join auth.users as campus_user on campus_user.id = own_profile.id
+    where own_profile.id = current_id and campus_user.email_confirmed_at is not null
+  ) then
+    raise exception 'Verify your college email and finish your profile before liking students.';
+  end if;
   if not exists (select 1 from public.profiles where id = p_receiver_id) then
     raise exception 'Profile not found.';
   end if;
@@ -233,6 +247,13 @@ as $$
 begin
   if auth.uid() is null or p_receiver_id is null or auth.uid() = p_receiver_id then
     raise exception 'That profile cannot be passed.';
+  end if;
+  if not exists (
+    select 1 from public.profiles as own_profile
+    join auth.users as campus_user on campus_user.id = own_profile.id
+    where own_profile.id = auth.uid() and campus_user.email_confirmed_at is not null
+  ) then
+    raise exception 'Verify your college email and finish your profile before passing students.';
   end if;
   insert into public.passes (sender_id, receiver_id)
   values (auth.uid(), p_receiver_id)

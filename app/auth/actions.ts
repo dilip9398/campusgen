@@ -9,12 +9,14 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 export interface FormState {
   error?: string;
   message?: string;
+  email?: string;
+  requiresOtp?: boolean;
 }
 
 const eligibleEmail = /^[^\s@]+@siddhartha\.co\.in$/i;
 const statuses = new Set<RelationshipStatus>(["single", "it_is_complicated", "open_to_see"]);
 
-export async function sendMagicLink(_previous: FormState, formData: FormData): Promise<FormState> {
+export async function sendSignupOtp(_previous: FormState, formData: FormData): Promise<FormState> {
   const email = formText(formData, "email").trim().toLowerCase();
   const password = formText(formData, "password");
   const confirmation = formText(formData, "confirm_password");
@@ -35,14 +37,44 @@ export async function sendMagicLink(_previous: FormState, formData: FormData): P
       email,
       password,
       options: {
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/auth/callback?next=%2Fauth`,
         data: { birth_date: birthDate },
       },
     });
     if (error) return { error: authErrorMessage(error.message) };
-    return { message: "Check your college inbox for a secure sign-in link. Your profile stays private until you finish setup." };
+    return { email, requiresOtp: true, message: "A six-digit verification code is on its way to your college inbox." };
   } catch {
     return { error: "Authentication is temporarily unavailable. Check the Supabase settings and try again." };
+  }
+}
+
+export async function verifySignupOtp(_previous: FormState, formData: FormData): Promise<FormState> {
+  const email = formText(formData, "email").trim().toLowerCase();
+  const token = formText(formData, "token").replace(/\s/g, "");
+  if (!eligibleEmail.test(email)) return { error: "Only valid @siddhartha.co.in college IDs are eligible." };
+  if (!/^\d{6}$/.test(token)) return { error: "Enter the six-digit code from your college inbox." };
+
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { error } = await supabase.auth.verifyOtp({ email, token, type: "signup" });
+    if (error) return { error: "That code expired or is incorrect. Request a new code and try again." };
+  } catch {
+    return { error: "We couldn't verify that code just now. Please try again." };
+  }
+
+  redirect("/auth");
+}
+
+export async function resendSignupOtp(_previous: FormState, formData: FormData): Promise<FormState> {
+  const email = formText(formData, "email").trim().toLowerCase();
+  if (!eligibleEmail.test(email)) return { error: "Only valid @siddhartha.co.in college IDs are eligible." };
+
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { error } = await supabase.auth.resend({ type: "signup", email });
+    if (error) return { error: "We couldn't resend the code. Wait a minute and try again." };
+    return { email, requiresOtp: true, message: "A fresh six-digit code is on its way." };
+  } catch {
+    return { error: "Authentication is temporarily unavailable. Please try again." };
   }
 }
 
@@ -66,6 +98,12 @@ export async function signInWithPassword(_previous: FormState, formData: FormDat
   redirect("/auth");
 }
 
+export async function signOut() {
+  const supabase = await createSupabaseServerClient();
+  await supabase.auth.signOut();
+  redirect("/");
+}
+
 export async function completeOnboarding(_previous: FormState, formData: FormData): Promise<FormState> {
   const payload = parsePayload(formData);
   if ("error" in payload) return { error: payload.error };
@@ -74,7 +112,7 @@ export async function completeOnboarding(_previous: FormState, formData: FormDat
     const supabase = await createSupabaseServerClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user?.email || !user.email_confirmed_at) {
-      return { error: "Verify your college email using the link we sent before continuing." };
+      return { error: "Verify your college email using the six-digit code we sent before continuing." };
     }
     if (!eligibleEmail.test(user.email)) {
       return { error: "Only valid @siddhartha.co.in college IDs are eligible." };
@@ -210,7 +248,7 @@ function isSecureUrl(value: string) {
 }
 
 function authErrorMessage(message: string) {
-  if (/already registered|already exists/i.test(message)) return "That college email already has an account. Try signing in with its email link.";
+  if (/already registered|already exists/i.test(message)) return "That college email already has an account. Sign in with your password.";
   if (/rate limit|too many/i.test(message)) return "Too many requests right now. Wait a few minutes before trying again.";
   return "We couldn't create your account. Check your details and try again.";
 }

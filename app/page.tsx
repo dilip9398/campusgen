@@ -1,69 +1,39 @@
 import Image from "next/image";
+import Link from "next/link";
+import { ArrowDown, ArrowUpRight, Heart, LockKeyhole, Sparkles } from "lucide-react";
+import { Navbar } from "@/components/Navbar";
+
+const steps = [
+  { number: "01", title: "Show your ID", text: "A verified Siddhartha email keeps this circle on campus." },
+  { number: "02", title: "Set your vibe", text: "Say what you’re into, add a few things you love, and meet people on the same wavelength." },
+  { number: "03", title: "Like it both ways", text: "A mutual yes unlocks your chosen contact. No cold DMs, no guessing." },
+];
 
 export default function Home() {
-  return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+  return <>
+    <Navbar />
+    <main>
+      <section className="home-hero">
+        <Image className="hero-image" src="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=2200&q=85" alt="College friends spending time together outdoors" fill priority unoptimized sizes="100vw" />
+        <div className="hero-scrim" />
+        <div className="hero-content">
+          <span className="hero-kicker"><span /> THE SIDDHARTHA EDITION</span>
+          <h1>Campus dating<br />without the<br /><em>awkwardness.</em></h1>
+          <p>For the people you pass between classes, and the ones you haven’t met yet. Exclusively for Siddhartha students.</p>
+          <div className="hero-actions"><Link href="/auth" className="button button-light">Get started with Siddhartha ID <ArrowUpRight size={17} /></Link><Link href="/lexicon" className="hero-quiet-link">The vibe bible <ArrowDown size={14} /></Link></div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+        <span className="hero-index">16° 31′ N &nbsp;·&nbsp; CAMPUS, CONNECTED</span>
+      </section>
+
+      <section className="how-section">
+        <div className="section-header"><div><span className="eyebrow">THREE STEPS, NO GUESSWORK</span><h2>Keep it <em>real.</em></h2></div><p>Good connections start with a little more context and a lot less awkward.</p></div>
+        <div className="steps-grid">{steps.map((step) => <article className="step-card" key={step.number}><span className="step-number">{step.number}</span><h3>{step.title}</h3><p>{step.text}</p><span className="step-rule" /></article>)}</div>
+      </section>
+
+      <section className="privacy-band"><div className="privacy-symbol"><LockKeyhole size={23} /></div><div><span className="eyebrow">YOUR HANDLE STAYS PRIVATE</span><h2>A mutual like is the only unlock.</h2><p>Your contact details never appear on your public profile. Only you and your match can see them.</p></div><Link href="/auth" className="privacy-link">Find your people <ArrowUpRight size={16} /></Link></section>
+
+      <section className="field-guide"><div className="guide-mark"><Heart size={27} fill="currentColor" /></div><div className="guide-copy"><span className="eyebrow">SITUATIONSHIP? CUFFING SEASON?</span><h2>Same words.<br /><em>Different meanings.</em></h2><p>A little context goes a long way. Find your footing in the campus dating lexicon.</p><Link href="/lexicon" className="text-link">Open the vibe bible <ArrowUpRight size={16} /></Link></div><div className="guide-stamp"><Sparkles size={17} /><span>11 TERMS<br />NO JUDGMENT</span></div></section>
+    </main>
+    <footer className="site-footer"><Link href="/" className="wordmark"><span className="wordmark-mark">c.</span> campus kin</Link><span>Made for meeting well.</span><Link href="/lexicon">Know the lingo <ArrowUpRight size={14} /></Link></footer>
+  </>;
 }
