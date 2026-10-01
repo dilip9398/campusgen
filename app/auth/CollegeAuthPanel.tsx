@@ -9,6 +9,7 @@ type AuthMode = "signup" | "signin";
 type FormAction = (formData: FormData) => void | Promise<void>;
 
 const input = "w-full rounded-lg border border-[var(--line)] bg-white px-4 py-3 text-sm text-[var(--ink)] outline-none transition focus:border-[var(--rose)] focus:ring-2 focus:ring-[var(--rose)]/15";
+const submitLabels: Record<AuthMode, string> = { signup: "Verify my Siddhartha ID", signin: "Sign in" };
 
 export function CollegeAuthPanel({ initialBirthDate, verificationError }: Readonly<{
   initialBirthDate: string;
@@ -25,7 +26,7 @@ export function CollegeAuthPanel({ initialBirthDate, verificationError }: Readon
       <button type="button" role="tab" aria-selected={mode === "signup"} className={mode === "signup" ? "mode-option is-selected" : "mode-option"} onClick={() => setMode("signup")}>Create account</button>
       <button type="button" role="tab" aria-selected={mode === "signin"} className={mode === "signin" ? "mode-option is-selected" : "mode-option"} onClick={() => setMode("signin")}>Sign in</button>
     </div>
-    {mode === "signup" && signup.requiresOtp
+    {mode === "signup" && signup.requiresVerification
       ? <OtpVerification email={signup.email ?? ""} signupMessage={signup.message} otp={otp} otpAction={otpAction} otpPending={otpPending} resend={resend} resendAction={resendAction} resendPending={resendPending} onBackToSignIn={() => setMode("signin")} />
       : <CredentialsForm mode={mode} action={mode === "signup" ? signupAction : signinAction} state={mode === "signup" ? signup : signin} pending={mode === "signup" ? signupPending : signinPending} initialBirthDate={initialBirthDate} verificationError={verificationError} />}
   </section>;
@@ -44,7 +45,7 @@ function OtpVerification({ email, signupMessage, otp, otpAction, otpPending, res
 }>) {
   return <div className="form-stack otp-verification">
     <h2>Check your college inbox.</h2>
-    <p>Enter the six-digit code sent to <strong>{email}</strong>.</p>
+    <p>Open the confirmation link in your email to continue. If the email contains a six-digit code, enter it below.</p>
     {signupMessage && <output className="form-success">{signupMessage}</output>}
     <form action={otpAction} className="form-stack">
       <input type="hidden" name="email" value={email} />
@@ -57,7 +58,7 @@ function OtpVerification({ email, signupMessage, otp, otpAction, otpPending, res
       <input type="hidden" name="email" value={email} />
       {resend.error && <p className="form-alert" role="alert">{resend.error}</p>}
       {resend.message && <output className="form-success">{resend.message}</output>}
-      <button className="button button-secondary button-wide" type="submit" disabled={resendPending}>{resendPending ? "Sending..." : "Resend code"}</button>
+      <button className="button button-secondary button-wide" type="submit" disabled={resendPending}>{resendPending ? "Sending..." : "Resend verification email"}</button>
     </form>
     <button className="otp-back" type="button" onClick={onBackToSignIn}>Back to sign in</button>
   </div>;
@@ -71,7 +72,7 @@ function CredentialsForm({ mode, action, state, pending, initialBirthDate, verif
   initialBirthDate: string;
   verificationError: boolean;
 }>) {
-  const submitLabel = pending ? "Working..." : mode === "signup" ? "Verify my Siddhartha ID" : "Sign in";
+  const submitLabel = pending ? "Working..." : submitLabels[mode];
 
   return <form action={action} className="form-stack">
     <label className="form-label" htmlFor="college-email">College email</label>

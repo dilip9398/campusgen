@@ -10,7 +10,7 @@ export interface FormState {
   error?: string;
   message?: string;
   email?: string;
-  requiresOtp?: boolean;
+  requiresVerification?: boolean;
 }
 
 const eligibleEmail = /^[^\s@]+@siddhartha\.co\.in$/i;
@@ -42,7 +42,7 @@ export async function sendSignupOtp(_previous: FormState, formData: FormData): P
       },
     });
     if (error) return { error: authErrorMessage(error.message) };
-    return { email, requiresOtp: true, message: "A six-digit verification code is on its way to your college inbox." };
+    return { email, requiresVerification: true, message: "A verification email is on its way. Open its link, or enter the six-digit code if one is included." };
   } catch {
     return { error: "Authentication is temporarily unavailable. Check the Supabase settings and try again." };
   }
@@ -72,8 +72,8 @@ export async function resendSignupOtp(_previous: FormState, formData: FormData):
   try {
     const supabase = await createSupabaseServerClient();
     const { error } = await supabase.auth.resend({ type: "signup", email });
-    if (error) return { error: "We couldn't resend the code. Wait a minute and try again." };
-    return { email, requiresOtp: true, message: "A fresh six-digit code is on its way." };
+    if (error) return { error: "We couldn't resend the verification email. Wait a minute and try again." };
+    return { email, requiresVerification: true, message: "A fresh verification email is on its way." };
   } catch {
     return { error: "Authentication is temporarily unavailable. Please try again." };
   }
