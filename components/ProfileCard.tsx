@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Heart, LockKeyhole, X } from "lucide-react";
 import { likeProfile, passProfile } from "@/app/auth/actions";
 import { MatchModal } from "@/components/MatchModal";
-import { statusLabels } from "@/lib/constants";
+import { avatarUrl, formatAvatarUrl, statusLabels } from "@/lib/constants";
 import type { DiscoveryProfile, Match } from "@/lib/types";
 
 export function ProfileCard({ profile, onNext }: { profile: DiscoveryProfile; onNext: (id: string) => void }) {
@@ -33,7 +33,7 @@ export function ProfileCard({ profile, onNext }: { profile: DiscoveryProfile; on
 
   const vibes = Array.isArray(profile.relationship_vibes) ? profile.relationship_vibes : [];
   const hobbies = Array.isArray(profile.hobbies) ? profile.hobbies : [];
-  const avatar = profile.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80";
+  const avatar = formatAvatarUrl(profile.avatar_url, profile.full_name);
   const statusText = statusLabels[profile.status] || "Single";
 
   return (
@@ -45,6 +45,10 @@ export function ProfileCard({ profile, onNext }: { profile: DiscoveryProfile; on
             alt={`${profile.full_name}'s profile`}
             className="profile-photo-img"
             style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = avatarUrl(profile.full_name || "Campus Kin");
+            }}
           />
           <div className="photo-shade" />
           <div className="photo-topline">

@@ -362,7 +362,8 @@ export async function updateMyProfile(_previous: FormState, formData: FormData):
     if (user) {
       const { error: rpcError } = await supabase.rpc("save_my_profile", { payload: updatedProfile });
       if (rpcError) {
-        await supabase.from("profiles").upsert({
+        console.error("save_my_profile failed in updateMyProfile, trying direct upsert:", rpcError);
+        const { error: directError } = await supabase.from("profiles").upsert({
           id: user.id,
           email: user.email,
           full_name,
@@ -377,6 +378,27 @@ export async function updateMyProfile(_previous: FormState, formData: FormData):
           contact_handle,
           birth_date: current.birth_date,
         });
+
+        if (directError) {
+          console.error("Direct upsert also failed in updateMyProfile:", directError);
+          return { error: onboardingErrorMessage(rpcError.message || directError.message) };
+        }
+      }
+
+      // Sync metadata with Supabase Auth user session
+      try {
+        await supabase.auth.updateUser({
+          data: {
+            full_name,
+            gender,
+            interested_in,
+            major,
+            grad_year,
+            avatar_url,
+          },
+        });
+      } catch (metaErr) {
+        console.warn("Could not sync user metadata in updateMyProfile:", metaErr);
       }
     }
   } catch (err) {

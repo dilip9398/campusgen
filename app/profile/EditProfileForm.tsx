@@ -60,6 +60,15 @@ export function EditProfileForm({ profile }: { profile: Profile }) {
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
+    setPhoto(profile.avatar_url);
+    setStatus(profile.status);
+    setGender(profile.gender || "male");
+    setInterestedIn(profile.interested_in || "opposite");
+    setHobbies(profile.hobbies || []);
+    setVibes(profile.relationship_vibes || []);
+  }, [profile]);
+
+  useEffect(() => {
     if (state.message) {
       setNotice(state.message);
       setIsEditing(false);

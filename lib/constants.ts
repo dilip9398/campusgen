@@ -14,7 +14,7 @@ export const campusHobbies = [
   "Indie Music",
   "Binge Watching",
 ] as const;
-export const avatarPresets = ["Aarav", "Mira", "Kavi", "Nila"] as const;
+export const avatarPresets = ["Aarav", "Mira", "Kavi", "Nila", "Dilip", "Priya", "Arjun", "Tara"] as const;
 
 export const genderOptions: { value: Gender; label: string }[] = [
   { value: "female", label: "Female" },
@@ -49,5 +49,21 @@ export const statusLabels: Record<RelationshipStatus, string> = {
 
 export function avatarUrl(seed: string) {
   return `https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(seed)}&backgroundColor=f8d8d8,c1e5de,ffdf9e,e3d9fc`;
+}
+
+export function formatAvatarUrl(url?: string, fallbackSeed = "Campus Kin"): string {
+  if (!url || !url.trim()) return avatarUrl(fallbackSeed);
+  const trimmed = url.trim();
+
+  // If it's a base64 data URL, return as-is for instant local rendering
+  if (trimmed.startsWith("data:image/")) return trimmed;
+
+  // If it contains /uploads/, always extract relative path /uploads/... so it works across localhost, mobile IPs, and production
+  const uploadIndex = trimmed.indexOf("/uploads/");
+  if (uploadIndex !== -1) {
+    return trimmed.slice(uploadIndex);
+  }
+
+  return trimmed;
 }
 

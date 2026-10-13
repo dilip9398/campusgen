@@ -1,8 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Camera, Loader2, Sparkles } from "lucide-react";
-import { avatarPresets, avatarUrl } from "@/lib/constants";
+import { Camera, Check, Loader2, Sparkles } from "lucide-react";
+import { avatarPresets, avatarUrl, formatAvatarUrl } from "@/lib/constants";
 
 interface PhotoUploadProps {
   value: string;
@@ -16,7 +16,6 @@ function compressImage(file: File, maxWidth = 500, quality = 0.82): Promise<{ bl
     const img = new window.Image();
     const objectUrl = URL.createObjectURL(file);
     img.onload = () => {
-      URL.revokeObjectURL(objectUrl);
       let { width, height } = img;
       if (width > maxWidth || height > maxWidth) {
         if (width > height) {
@@ -31,11 +30,15 @@ function compressImage(file: File, maxWidth = 500, quality = 0.82): Promise<{ bl
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext("2d");
-      if (!ctx) return reject(new Error("Canvas context unavailable"));
+      if (!ctx) {
+        URL.revokeObjectURL(objectUrl);
+        return reject(new Error("Canvas context unavailable"));
+      }
       ctx.drawImage(img, 0, 0, width, height);
       const dataUrl = canvas.toDataURL("image/jpeg", quality);
       canvas.toBlob(
         (blob) => {
+          URL.revokeObjectURL(objectUrl);
           if (blob) resolve({ blob, dataUrl });
           else reject(new Error("Image compression failed"));
         },
@@ -45,7 +48,7 @@ function compressImage(file: File, maxWidth = 500, quality = 0.82): Promise<{ bl
     };
     img.onerror = () => {
       URL.revokeObjectURL(objectUrl);
-      reject(new Error("Could not read image"));
+      reject(new Error("Could not read image file"));
     };
     img.src = objectUrl;
   });
@@ -66,9 +69,9 @@ export function PhotoUpload({ value, onChange, name, label = "Your profile photo
     setIsUploading(true);
 
     try {
-      // 1. Client-side canvas compression down to ~40KB
+      // 1. Client-side canvas compression down to ~35KB
       const { blob, dataUrl } = await compressImage(file);
-      // Immediate local preview so UI updates without lag
+      // Instant local preview
       onChange(dataUrl);
 
       // 2. Upload compressed blob to /api/upload
@@ -90,7 +93,7 @@ export function PhotoUpload({ value, onChange, name, label = "Your profile photo
       }
     } catch (err: unknown) {
       console.warn("Upload notice:", err);
-      // Keep working preview even if remote upload encountered a temporary hiccup
+      // Keep local compressed preview working even if server encounters a hiccup
     } finally {
       setIsUploading(false);
       if (event.target) event.target.value = "";
@@ -103,14 +106,19 @@ export function PhotoUpload({ value, onChange, name, label = "Your profile photo
       <div className="photo-upload-main">
         <div className="photo-upload-preview">
           <img
-            src={preview}
+            src={formatAvatarUrl(preview)}
             alt="Profile photo preview"
             className="photo-upload-img"
             style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = avatarUrl("Campus Kin");
+            }}
           />
           {isUploading && (
             <div className="photo-upload-spinner" aria-label="Uploading...">
               <Loader2 className="animate-spin" size={24} />
+              <span style={{ fontSize: "11px", marginTop: "4px" }}>Saving...</span>
             </div>
           )}
         </div>
@@ -120,8 +128,8 @@ export function PhotoUpload({ value, onChange, name, label = "Your profile photo
             type="file"
             ref={fileInputRef}
             onChange={handleFileChange}
-            accept="image/png,image/jpeg,image/webp,image/gif"
-            className="hidden"
+            accept="image/*"
+            style={{ display: "none" }}
             aria-label="Upload photo from device"
           />
 
@@ -132,36 +140,51 @@ export function PhotoUpload({ value, onChange, name, label = "Your profile photo
             disabled={isUploading}
           >
             <Camera size={16} />
-            <span>{isUploading ? "Compressing & uploading..." : "Choose from device"}</span>
+            <span>{isUploading ? "Uploading photo..." : "Upload from device"}</span>
           </button>
 
           <p className="photo-upload-hint">
-            PNG, JPG or WEBP from your phone or laptop.
+            Take a selfie or choose any image from phone or laptop.
           </p>
 
           <div className="preset-selector">
             <span className="preset-label">
-              <Sparkles size={12} /> Or pick a preset:
+              <Sparkles size={12} /> Or pick a student avatar:
             </span>
             <div className="preset-row">
-              {avatarPresets.map((preset) => (
-                <button
-                  type="button"
-                  key={preset}
-                  className={value === avatarUrl(preset) ? "avatar-preset is-picked" : "avatar-preset"}
-                  onClick={() => onChange(avatarUrl(preset))}
-                  aria-label={`Use ${preset} avatar`}
-                  title={`${preset} avatar`}
-                >
-                  <img src={avatarUrl(preset)} alt="" width={32} height={32} style={{ borderRadius: "50%" }} />
-                </button>
-              ))}
+              {avatarPresets.map((preset) => {
+                const presetUrl = avatarUrl(preset);
+                const isPicked = value === presetUrl;
+                return (
+                  <button
+                    type="button"
+                    key={preset}
+                    className={isPicked ? "avatar-preset is-picked" : "avatar-preset"}
+                    onClick={() => onChange(presetUrl)}
+                    aria-label={`Use ${preset} avatar`}
+                    title={`${preset} avatar`}
+                  >
+                    <img
+                      src={presetUrl}
+                      alt={preset}
+                      width={32}
+                      height={32}
+                      style={{ borderRadius: "50%" }}
+                    />
+                    {isPicked && (
+                      <span className="preset-check-badge">
+                        <Check size={10} />
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
       </div>
 
-      {name && <input type="hidden" name={name} value={value} required />}
+      {name && <input type="hidden" name={name} value={value || avatarUrl("Campus Kin")} />}
       {uploadError && <p className="form-alert">{uploadError}</p>}
     </div>
   );

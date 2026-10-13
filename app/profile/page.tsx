@@ -1,10 +1,9 @@
-import Image from "next/image";
 import { redirect } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { EditProfileForm } from "@/app/profile/EditProfileForm";
 import { getCurrentProfile } from "@/lib/auth-session";
-import { statusLabels } from "@/lib/constants";
-import { Calendar, GraduationCap, ShieldCheck, Sparkles, User } from "lucide-react";
+import { avatarUrl, formatAvatarUrl, statusLabels } from "@/lib/constants";
+import { GraduationCap, ShieldCheck } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -22,10 +21,14 @@ export default async function ProfilePage() {
           <div className="profile-hero-content">
             <div className="profile-avatar-wrapper">
               <img
-                src={profile.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80"}
+                src={formatAvatarUrl(profile.avatar_url, profile.full_name)}
                 alt={`${profile.full_name}'s avatar`}
                 className="profile-avatar-img"
                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = avatarUrl(profile.full_name || "Campus Kin");
+                }}
               />
             </div>
             <div className="profile-hero-info">

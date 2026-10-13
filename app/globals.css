@@ -443,17 +443,67 @@ button:disabled { cursor: wait; opacity: .65; }
 }
 .preset-selector {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 3px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 4px;
 }
 .preset-label {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
+}
+.preset-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.avatar-preset {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  padding: 2px;
+  border: 2px solid var(--line);
+  background: white;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.avatar-preset:hover {
+  transform: scale(1.1);
+  border-color: var(--rose);
+}
+.avatar-preset.is-picked {
+  border-color: var(--rose);
+  box-shadow: 0 0 0 2px rgba(224, 91, 107, 0.35);
+  transform: scale(1.08);
+}
+.avatar-preset img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.preset-check-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--rose);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid white;
 }
 
 /* ========================================================
@@ -485,17 +535,23 @@ button:disabled { cursor: wait; opacity: .65; }
 }
 .profile-avatar-wrapper {
   position: relative;
-  width: 90px;
-  height: 90px;
+  width: 96px;
+  height: 96px;
   border-radius: 50%;
   overflow: hidden;
-  border: 3px solid white;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.12);
-  background: var(--mint);
+  border: 3.5px solid white;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.14);
+  background: #f7f3ed;
   margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .profile-avatar-img {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
+  display: block;
 }
 .profile-hero-info h1 {
   margin: 6px 0 3px;
@@ -510,6 +566,94 @@ button:disabled { cursor: wait; opacity: .65; }
   align-items: center;
   gap: 7px;
   margin-bottom: 4px;
+}
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: #e8f4f0;
+  border: 1px solid #cce5dc;
+  color: var(--teal);
+  font-size: 11px;
+  font-weight: 700;
+}
+.status-pill.is-current {
+  padding: 5px 14px;
+  font-size: 12px;
+}
+.gender-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: #f4effa;
+  border: 1px solid #dfd3f2;
+  color: #6941c6;
+  font-size: 11px;
+  font-weight: 700;
+}
+.campus-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: #fff8eb;
+  border: 1px solid #fee4be;
+  color: #b54708;
+  font-size: 11px;
+  font-weight: 700;
+}
+.profile-hero-verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 5px;
+  color: var(--teal);
+  font-size: 12px;
+  font-weight: 600;
+}
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.hobby-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: #f5f2eb;
+  border: 1px solid #e5dfd7;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+}
+.vibe-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: #fdf2f2;
+  border: 1px solid #fcdada;
+  color: var(--rose-deep);
+  font-size: 12px;
+  font-weight: 600;
+}
+.privacy-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #f0ece6;
+  color: #6d665f;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
 .profile-hero-email {
   display: inline-flex;

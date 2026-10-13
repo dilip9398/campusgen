@@ -1,9 +1,9 @@
 "use client";
 
-import Image from "next/image";
-import Link from "next/link";
 import { useState } from "react";
+import Link from "next/link";
 import { Check, Copy, Flame, Lock, MessageCircle, Share2, Sparkles, Users } from "lucide-react";
+import { avatarUrl, formatAvatarUrl } from "@/lib/constants";
 import type { DiscoveryProfile, Profile } from "@/lib/types";
 
 export function FeedLocked143({
@@ -133,9 +133,13 @@ export function FeedLocked143({
               <div key={t.id || idx} className="teaser-card">
                 <div className="teaser-photo-box">
                   <img
-                    src={t.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80"}
+                    src={formatAvatarUrl(t.avatar_url, t.full_name)}
                     alt="Mystery student"
                     className="teaser-blurred-img"
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = avatarUrl(t.full_name || "Student");
+                    }}
                   />
                   <div className="teaser-lock-badge">
                     <Lock size={18} />
