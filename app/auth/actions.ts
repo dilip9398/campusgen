@@ -21,9 +21,10 @@ export interface FormState {
   error?: string;
   message?: string;
   email?: string;
+  needsOnboarding?: boolean;
 }
 
-const eligibleEmail = /^[^\s@]+@siddhartha\.co\.in$/i;
+const eligibleEmail = /^[^\s@]+@([a-z0-9-]+\.)*siddhartha\.co\.in$/i;
 const statuses = new Set<RelationshipStatus>(["single", "it_is_complicated", "open_to_see"]);
 const validGenders = new Set<Gender>(["male", "female", "other"]);
 const validInterestedIn = new Set<InterestedIn>(["opposite", "female", "male", "all"]);
@@ -39,7 +40,7 @@ export async function signUpWithPassword(_previous: FormState, formData: FormDat
   const gender = formText(formData, "gender", "female") as Gender;
 
   if (!eligibleEmail.test(email)) {
-    return { error: "Only valid @siddhartha.co.in college IDs are eligible." };
+    return { error: "Only valid Siddhartha college IDs (@siddhartha.co.in) are eligible." };
   }
   if (password.length < 8 || password.length > 128) {
     return { error: "Use a password of at least 8 characters." };
@@ -73,7 +74,7 @@ export async function signUpWithPassword(_previous: FormState, formData: FormDat
 
     if (signUpError) {
       if (/already registered|already exists/i.test(signUpError.message)) {
-        return { error: "That college email already has an account. Sign in with your password." };
+        return { error: "That college email already has an account. Switch to 'Sign in' to log in." };
       }
       return { error: authErrorMessage(signUpError.message) };
     }
@@ -95,15 +96,23 @@ export async function signInWithPassword(_previous: FormState, formData: FormDat
   const email = formText(formData, "email").trim().toLowerCase();
   const password = formText(formData, "password");
 
-  if (!eligibleEmail.test(email)) return { error: "Only valid @siddhartha.co.in college IDs are eligible." };
+  if (!eligibleEmail.test(email)) return { error: "Only valid Siddhartha college IDs (@siddhartha.co.in) are eligible." };
   if (!password) return { error: "Enter your password to sign in." };
-  if (password.length < 8) return { error: "Password must be at least 8 characters." };
 
   try {
     const supabase = await createSupabaseServerClient();
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      return { error: "Incorrect college email or password. Please check your credentials." };
+      if (/invalid login credentials|invalid credentials/i.test(error.message)) {
+        return { error: "Invalid email or password. If you haven't created an account yet, switch to 'Create account'." };
+      }
+      if (/email not confirmed/i.test(error.message)) {
+        return { error: "Your college email has not been confirmed yet. Please check your inbox for the confirmation link." };
+      }
+      if (/too many requests|rate limit/i.test(error.message)) {
+        return { error: "Too many attempts right now. Please wait a minute before trying again." };
+      }
+      return { error: error.message || "Incorrect college email or password. Please check your credentials." };
     }
   } catch {
     return { error: "Authentication service is currently unavailable. Please try again." };
@@ -120,7 +129,7 @@ export async function signInWithPassword(_previous: FormState, formData: FormDat
   if (hasProfile) {
     redirect("/feed");
   } else {
-    redirect("/auth");
+    return { email, message: "Signed in! Please complete your profile details.", needsOnboarding: true };
   }
 }
 

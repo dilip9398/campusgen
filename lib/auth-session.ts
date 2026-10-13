@@ -54,36 +54,37 @@ export async function getCurrentProfile(): Promise<Profile | null> {
     }
 
     // Try direct select from profiles table
-    const { data: directProfile, error: directError } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", user.id)
-      .maybeSingle();
+    try {
+      const { data: directProfile, error: directError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .maybeSingle();
 
-    if (!directError && directProfile) {
-      return {
-        id: user.id,
-        email: user.email || directProfile.email || "",
-        full_name: directProfile.full_name,
-        major: directProfile.major,
-        grad_year: directProfile.grad_year,
-        avatar_url: directProfile.avatar_url,
-        bio: directProfile.bio || "",
-        gender: resolveProfileGender(directProfile),
-        interested_in: directProfile.interested_in || "opposite",
-        status: directProfile.status || "single",
-        hobbies: Array.isArray(directProfile.hobbies) ? directProfile.hobbies : [],
-        relationship_vibes: Array.isArray(directProfile.relationship_vibes) ? directProfile.relationship_vibes : [],
-        contact_type: directProfile.contact_type || "instagram",
-        contact_handle: directProfile.contact_handle || "",
-        birth_date: directProfile.birth_date || user.user_metadata?.birth_date || "2002-01-01",
-        created_at: directProfile.created_at || new Date().toISOString(),
-      };
-    }
+      if (!directError && directProfile) {
+        return {
+          id: user.id,
+          email: user.email || directProfile.email || "",
+          full_name: directProfile.full_name,
+          major: directProfile.major,
+          grad_year: directProfile.grad_year,
+          avatar_url: directProfile.avatar_url,
+          bio: directProfile.bio || "",
+          gender: resolveProfileGender(directProfile),
+          interested_in: directProfile.interested_in || "opposite",
+          status: directProfile.status || "single",
+          hobbies: Array.isArray(directProfile.hobbies) ? directProfile.hobbies : [],
+          relationship_vibes: Array.isArray(directProfile.relationship_vibes) ? directProfile.relationship_vibes : [],
+          contact_type: directProfile.contact_type || "instagram",
+          contact_handle: directProfile.contact_handle || "",
+          birth_date: directProfile.birth_date || user.user_metadata?.birth_date || "2002-01-01",
+          created_at: directProfile.created_at || new Date().toISOString(),
+        };
+      }
+    } catch {}
 
     return null;
-  } catch (error) {
-    console.error("getCurrentProfile error:", error);
+  } catch {
     return null;
   }
 }
@@ -167,6 +168,11 @@ export async function getFeedProfilesList(
 export async function getCampusSignupCount(): Promise<number> {
   try {
     const supabase = await createSupabaseServerClient();
+    const { data: feedData, error: feedError } = await supabase.rpc("get_feed_profiles");
+    if (!feedError && Array.isArray(feedData)) {
+      return Math.max(1, feedData.length + 1);
+    }
+
     const { count, error } = await supabase
       .from("profiles")
       .select("*", { count: "exact", head: true });
@@ -177,5 +183,5 @@ export async function getCampusSignupCount(): Promise<number> {
   } catch (err) {
     console.warn("getCampusSignupCount query notice:", err);
   }
-  return 0;
+  return 1;
 }

@@ -30,6 +30,14 @@ export function CollegeAuthPanel({
     }
   }, [signup.message, signup.error, signup.email, onAccountCreated]);
 
+  useEffect(() => {
+    if (signin.needsOnboarding || (signin.message && !signin.error)) {
+      onAccountCreated?.({
+        email: signin.email ?? "",
+      });
+    }
+  }, [signin.needsOnboarding, signin.message, signin.error, signin.email, onAccountCreated]);
+
   return (
     <section className="auth-panel">
       <div className="mode-switch" role="tablist" aria-label="Account type">
