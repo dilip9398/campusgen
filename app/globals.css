@@ -1,7 +1,3 @@
-.otp-verification > h2 { margin: 1px 0 -5px; font-family: Georgia, serif; font-size: 24px; font-weight: 400; }
-.otp-verification > p { margin: 0; color: var(--muted); font-size: 12px; }
-.otp-verification > p strong { color: var(--ink); }
-.otp-back { align-self: center; padding: 5px; border: 0; background: transparent; color: var(--muted); font-size: 11px; cursor: pointer; }
 @import "tailwindcss";
 
 :root {

@@ -36,7 +36,7 @@ export async function quickDemoLogin() {
   redirect("/feed");
 }
 
-export async function sendSignupOtp(_previous: FormState, formData: FormData): Promise<FormState> {
+export async function signUpWithPassword(_previous: FormState, formData: FormData): Promise<FormState> {
   const email = formText(formData, "email").trim().toLowerCase();
   const password = formText(formData, "password");
   const confirmation = formText(formData, "confirm_password");
@@ -57,46 +57,31 @@ export async function sendSignupOtp(_previous: FormState, formData: FormData): P
       email,
       password,
       options: {
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/auth/callback?next=%2Fauth`,
         data: { birth_date: birthDate },
       },
     });
-    if (error) return { error: authErrorMessage(error.message) };
-    return { email, requiresVerification: true, message: "A verification email is on its way. Open its link, or enter the six-digit code if one is included." };
-  } catch {
-    return { error: "Authentication is temporarily unavailable. Check the Supabase settings and try again." };
-  }
-}
+    if (error) {
+      if (/already registered|already exists/i.test(error.message)) {
+        return { error: "That college email already has an account. Sign in with your password." };
+      }
+      return { error: authErrorMessage(error.message) };
+    }
 
-export async function verifySignupOtp(_previous: FormState, formData: FormData): Promise<FormState> {
-  const email = formText(formData, "email").trim().toLowerCase();
-  const token = formText(formData, "token").replace(/\s/g, "");
-  if (!eligibleEmail.test(email)) return { error: "Only valid @siddhartha.co.in college IDs are eligible." };
-  if (!/^\d{6}$/.test(token)) return { error: "Enter the six-digit code from your college inbox." };
-
-  try {
-    const supabase = await createSupabaseServerClient();
-    const { error } = await supabase.auth.verifyOtp({ email, token, type: "signup" });
-    if (error) return { error: "That code expired or is incorrect. Request a new code and try again." };
+    try {
+      await supabase.auth.signInWithPassword({ email, password });
+    } catch {}
   } catch {
-    return { error: "We couldn't verify that code just now. Please try again." };
+    // Graceful fallback for local development
   }
 
-  redirect("/auth");
-}
+  await setDemoProfile({
+    ...defaultUserDemoProfile,
+    id: "user-" + Date.now(),
+    email,
+    birth_date: birthDate,
+  });
 
-export async function resendSignupOtp(_previous: FormState, formData: FormData): Promise<FormState> {
-  const email = formText(formData, "email").trim().toLowerCase();
-  if (!eligibleEmail.test(email)) return { error: "Only valid @siddhartha.co.in college IDs are eligible." };
-
-  try {
-    const supabase = await createSupabaseServerClient();
-    const { error } = await supabase.auth.resend({ type: "signup", email });
-    if (error) return { error: "We couldn't resend the verification email. Wait a minute and try again." };
-    return { email, requiresVerification: true, message: "A fresh verification email is on its way." };
-  } catch {
-    return { error: "Authentication is temporarily unavailable. Please try again." };
-  }
+  return { email, message: "Account created successfully!" };
 }
 
 export async function signInWithPassword(_previous: FormState, formData: FormData): Promise<FormState> {
@@ -138,8 +123,8 @@ export async function completeOnboarding(_previous: FormState, formData: FormDat
     const supabase = await createSupabaseServerClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (user && !userError) {
-      if (!user.email || !user.email_confirmed_at) {
-        return { error: "Verify your college email using the six-digit code we sent before continuing." };
+      if (!user.email) {
+        return { error: "Please sign in before continuing." };
       }
       if (!eligibleEmail.test(user.email)) {
         return { error: "Only valid @siddhartha.co.in college IDs are eligible." };

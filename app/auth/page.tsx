@@ -19,7 +19,7 @@ export default async function AuthPage({ searchParams }: {
     try {
       const supabase = await createSupabaseServerClient();
       const { data: { user } } = await supabase.auth.getUser();
-      if (user?.email_confirmed_at) {
+      if (user) {
         initialPhase = 2;
         const metadataBirthDate = user.user_metadata?.birth_date;
         if (typeof metadataBirthDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(metadataBirthDate)) {
@@ -31,5 +31,5 @@ export default async function AuthPage({ searchParams }: {
     }
   }
 
-  return <AuthWizard initialPhase={initialPhase} initialBirthDate={birthDate} verificationError={params.error === "verification"} />;
+  return <AuthWizard initialPhase={initialPhase} initialBirthDate={birthDate} />;
 }

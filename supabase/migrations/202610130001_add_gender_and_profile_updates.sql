@@ -27,10 +27,10 @@ begin
   end if;
 
   select email into verified_email from auth.users
-  where id = current_id and email_confirmed_at is not null;
+  where id = current_id;
 
   if verified_email is null or lower(verified_email) !~ '^[^[:space:]@]+@siddhartha\.co\.in$' then
-    raise exception 'Verify an eligible Siddhartha college email before continuing.';
+    raise exception 'Only eligible Siddhartha college emails (@siddhartha.co.in) can create a profile.';
   end if;
 
   parsed_birth_date := (payload->>'birth_date')::date;

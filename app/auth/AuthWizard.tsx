@@ -36,12 +36,13 @@ const phaseCopy = {
   3: { title: "Set your intentions.", description: "Choose up to two. Honest beats impressive." },
 } as const;
 
-export function AuthWizard({ initialPhase, initialBirthDate, verificationError = false }: Readonly<{
+export function AuthWizard({ initialPhase, initialBirthDate }: Readonly<{
   initialPhase: 1 | 2;
   initialBirthDate: string;
   verificationError?: boolean;
 }>) {
   const [phase, setPhase] = useState<1 | 2 | 3>(initialPhase);
+  const [birthDate, setBirthDate] = useState(initialBirthDate);
   const [profile, profileAction, profilePending] = useActionState(completeOnboarding, {} as FormState);
   const [photo, setPhoto] = useState(avatarUrl("Campus Kin"));
   const [gender, setGender] = useState<Gender>("female");
@@ -73,9 +74,17 @@ export function AuthWizard({ initialPhase, initialBirthDate, verificationError =
       </div>
       <div className="step-track" aria-label={`Step ${phase} of 3`}>{[1, 2, 3].map((step) => <span key={step} className={step <= phase ? "step-dot is-active" : "step-dot"} />)}<span className="step-caption">STEP {phase} OF 3</span></div>
 
-      {phase === 1 ? <CollegeAuthPanel initialBirthDate={initialBirthDate} verificationError={verificationError} /> : <form ref={form} action={profileAction} className="auth-panel form-stack">
-        {!initialBirthDate && <><label className="form-label" htmlFor="profile-birth-date">Date of birth <span className="label-aside">18+ only</span></label><input id="profile-birth-date" className={input} type="date" name="birth_date" max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().slice(0, 10)} required /></>}
-        {initialBirthDate && <input type="hidden" name="birth_date" value={initialBirthDate} />}
+      {phase === 1 ? (
+        <CollegeAuthPanel
+          initialBirthDate={birthDate}
+          onAccountCreated={(bDate) => {
+            if (bDate) setBirthDate(bDate);
+            setPhase(2);
+          }}
+        />
+      ) : <form ref={form} action={profileAction} className="auth-panel form-stack">
+        {!birthDate && <><label className="form-label" htmlFor="profile-birth-date">Date of birth <span className="label-aside">18+ only</span></label><input id="profile-birth-date" className={input} type="date" name="birth_date" max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().slice(0, 10)} required /></>}
+        {birthDate && <input type="hidden" name="birth_date" value={birthDate} />}
 
         <div hidden={phase !== 2}>
           <PhotoUpload
