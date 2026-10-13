@@ -108,6 +108,9 @@ export async function signUpWithPassword(_previous: FormState, formData: FormDat
     if (signInError) {
       console.warn("Auto sign-in notice:", signInError.message);
     }
+
+    revalidatePath("/feed");
+    revalidatePath("/");
   } catch (err) {
     console.error("SignUp error:", err);
     return { error: "Unable to connect to authentication server. Please check your connection." };
@@ -280,6 +283,7 @@ export async function completeOnboarding(_previous: FormState, formData: FormDat
 
   revalidatePath("/feed");
   revalidatePath("/profile");
+  revalidatePath("/");
   redirect("/feed");
 }
 

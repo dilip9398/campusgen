@@ -1,14 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Check, Copy, Flame, Lock, MessageCircle, Share2, Sparkles, Users } from "lucide-react";
+import { useRouter } from "next/navigation";
+import {
+  Check,
+  Copy,
+  Flame,
+  Lock,
+  RotateCw,
+  Share2,
+  Sparkles,
+} from "lucide-react";
 import { avatarUrl, formatAvatarUrl } from "@/lib/constants";
 import type { DiscoveryProfile, Profile } from "@/lib/types";
 
 export function FeedLocked143({
   count,
-  goal = 143,
+  goal = 50,
   profiles = [],
   myProfile,
 }: {
@@ -17,13 +26,63 @@ export function FeedLocked143({
   profiles?: DiscoveryProfile[];
   myProfile: Profile;
 }) {
+  const router = useRouter();
+  const [liveCount, setLiveCount] = useState(count);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [toast, setToast] = useState("");
 
-  const percent = Math.min(100, Math.max(4, Math.round((count / goal) * 100)));
-  const remaining = Math.max(0, goal - count);
+  const percent = Math.min(100, Math.max(4, Math.round((liveCount / goal) * 100)));
+  const remaining = Math.max(0, goal - liveCount);
 
-  const inviteText = `Hey! Siddhartha Campus Kin unlocks the campus dating feed when 143 students join! We're at ${count}/${goal} students right now. Join with your college email here:`;
+  // Sync latest count from /api/counter
+  async function syncCounter(showNotice = false) {
+    try {
+      setIsSyncing(true);
+      const res = await fetch("/api/counter", { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        if (typeof data.count === "number") {
+          setLiveCount(data.count);
+          if (data.isUnlocked || data.count >= goal) {
+            // Auto unlock feed immediately
+            router.refresh();
+          } else if (showNotice && data.count !== liveCount) {
+            setToast(`Live update: ${data.count} students joined so far!`);
+            setTimeout(() => setToast(""), 2800);
+          }
+        }
+      }
+    } catch {
+      // Quiet fallback
+    } finally {
+      setIsSyncing(false);
+    }
+  }
+
+  // Periodic auto-update polling (every 8s) + immediate check on tab focus
+  useEffect(() => {
+    setLiveCount(count);
+
+    const interval = setInterval(() => {
+      syncCounter(false);
+    }, 8000);
+
+    function onVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        syncCounter(false);
+      }
+    }
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [count, goal]);
+
+  const inviteText = `Hey! Siddhartha Campus Kin unlocks the campus dating feed when 50 students join! We're at ${liveCount}/${goal} students right now. Join with your college email here:`;
 
   function copyInvite() {
     const url = typeof window !== "undefined" ? window.location.origin + "/auth" : "https://campuskin.in/auth";
@@ -45,24 +104,49 @@ export function FeedLocked143({
 
   return (
     <div className="feed-locked-container">
-      {/* 143 Curiosity Hero */}
+      {/* 50 Curiosity Hero */}
       <div className="feed-unlock-hero">
-        <div className="unlock-live-tag">
-          <span className="live-dot" />
-          <span>LIVE CAMPUS COUNTER • 143 CHALLENGE</span>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
+          <div className="unlock-live-tag">
+            <span className="live-dot" />
+            <span>LIVE CAMPUS COUNTER • 50 SIGNUP GOAL</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => syncCounter(true)}
+            style={{
+              background: "rgba(255,255,255,0.08)",
+              border: "1px solid rgba(255,255,255,0.15)",
+              color: "#e0ece8",
+              fontSize: "11px",
+              fontWeight: 600,
+              padding: "4px 10px",
+              borderRadius: "20px",
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "5px",
+              marginBottom: "14px",
+            }}
+            title="Check latest count"
+          >
+            <RotateCw size={12} className={isSyncing ? "animate-spin" : ""} />
+            <span>{isSyncing ? "Syncing..." : "Live Auto-Update"}</span>
+          </button>
         </div>
+
         <h1 className="unlock-title">
-          The Campus Feed Unlocks at <em>143 Students.</em>
+          The Campus Feed Unlocks at <em>50 Students.</em>
         </h1>
         <p className="unlock-subtitle">
-          In campus lore, <strong>143</strong> stands for the unspoken code. To ensure a vibrant experience with genuine connections across departments, the full discovery feed unlocks the moment 143 verified Siddhartha peers join!
+          To ensure a vibrant experience with genuine connections across departments, the full discovery feed unlocks the moment <strong>50</strong> verified Siddhartha peers join!
         </p>
 
         {/* Live Milestone Progress Card */}
         <div className="unlock-progress-card">
           <div className="unlock-stats-grid">
             <div className="stat-box">
-              <span className="stat-num">{count}</span>
+              <span className="stat-num">{liveCount}</span>
               <span className="stat-label">Students Joined</span>
             </div>
             <div className="stat-box">
@@ -89,7 +173,7 @@ export function FeedLocked143({
               <span>25%</span>
               <span>50%</span>
               <span>75%</span>
-              <span className="goal-flag">🎯 143 UNLOCK</span>
+              <span className="goal-flag">🎯 50 UNLOCK</span>
             </div>
           </div>
         </div>
@@ -104,7 +188,7 @@ export function FeedLocked143({
           <div>
             <h3>Want to unlock the feed faster? 🚀</h3>
             <p>
-              Share with your campus groups, hostel buddies, and friends. Every Siddhartha student who signs up counts toward the 143 unlock!
+              Share with your campus groups, hostel buddies, and friends. Every Siddhartha student who signs up counts toward the 50 unlock!
             </p>
           </div>
         </div>
@@ -124,7 +208,7 @@ export function FeedLocked143({
         <div className="teaser-header">
           <span className="eyebrow"><Sparkles size={13} /> CURIOUS WHO’S INSIDE?</span>
           <h2>Teaser Reel • Students In Your Orbit</h2>
-          <p>Full profiles, photos, and like/match actions unlock automatically once we hit 143.</p>
+          <p>Full profiles, photos, and like/match actions unlock automatically once we hit 50.</p>
         </div>
 
         <div className="teaser-grid">
@@ -143,7 +227,7 @@ export function FeedLocked143({
                   />
                   <div className="teaser-lock-badge">
                     <Lock size={18} />
-                    <span>Unlocks at 143</span>
+                    <span>Unlocks at 50</span>
                   </div>
                 </div>
                 <div className="teaser-info">
@@ -174,7 +258,7 @@ export function FeedLocked143({
                   <div className="mock-blurred-bg" />
                   <div className="teaser-lock-badge">
                     <Lock size={18} />
-                    <span>Unlocks at 143</span>
+                    <span>Unlocks at 50</span>
                   </div>
                 </div>
                 <div className="teaser-info">
@@ -206,3 +290,5 @@ export function FeedLocked143({
     </div>
   );
 }
+
+export const FeedLocked50 = FeedLocked143;

@@ -18,7 +18,7 @@ export default async function FeedPage({ searchParams }: {
   if (!myProfile) redirect("/auth");
 
   const signupCount = await getCampusSignupCount();
-  const UNLOCK_GOAL = 143;
+  const UNLOCK_GOAL = 50;
   const isUnlocked = signupCount >= UNLOCK_GOAL || params.preview === "unlocked";
 
   const department = departments.includes(params.department as (typeof departments)[number]) ? params.department! : "";
@@ -34,7 +34,7 @@ export default async function FeedPage({ searchParams }: {
     <>
       <Navbar signedIn />
       <main className="app-frame feed-page">
-        {/* If count is below 143, render the curiosity-driven locked screen */}
+        {/* If count is below 50, render the curiosity-driven locked screen */}
         {!isUnlocked ? (
           <FeedLocked143
             count={signupCount}
@@ -44,20 +44,20 @@ export default async function FeedPage({ searchParams }: {
           />
         ) : (
           <>
-            {/* 143 Milestone Celebratory Banner */}
+            {/* 50 Milestone Celebratory Banner */}
             <div className="feed-unlocked-banner">
               <div className="unlocked-banner-badge">
-                <Sparkles size={15} /> 143 MILESTONE ACHIEVED
+                <Sparkles size={15} /> 50 MILESTONE ACHIEVED
               </div>
               <div className="unlocked-banner-content">
                 <h3>🎉 The Siddhartha Campus Feed is Officially Unlocked!</h3>
                 <p>
-                  143 students have joined the campus circle. Browse, like, and discover who is in your orbit.
+                  50 students have joined the campus circle. Browse, like, and discover who is in your orbit.
                 </p>
               </div>
               {params.preview === "unlocked" && (
                 <Link href="/feed" className="preview-back-pill">
-                  View 143 Counter
+                  View 50 Counter
                 </Link>
               )}
             </div>
