@@ -163,3 +163,19 @@ export async function getFeedProfilesList(
       return true;
     });
 }
+
+export async function getCampusSignupCount(): Promise<number> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { count, error } = await supabase
+      .from("profiles")
+      .select("*", { count: "exact", head: true });
+
+    if (!error && typeof count === "number") {
+      return count;
+    }
+  } catch (err) {
+    console.warn("getCampusSignupCount query notice:", err);
+  }
+  return 0;
+}

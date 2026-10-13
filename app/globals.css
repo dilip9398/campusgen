@@ -740,3 +740,460 @@ button:disabled { cursor: wait; opacity: .65; }
   padding-top: 6px;
 }
 
+/* 143 Feed Unlock & Viral Mechanics */
+.feed-locked-container { display: flex; flex-direction: column; gap: 24px; padding: 12px 0 45px; }
+
+.feed-unlock-hero {
+  position: relative;
+  padding: 32px 28px;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #2b3333, #1e2424);
+  color: white;
+  border: 1px solid #434e4e;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+
+.unlock-live-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #f7d5a5;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  margin-bottom: 14px;
+}
+
+.live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #f43f5e;
+  box-shadow: 0 0 10px #f43f5e;
+  animation: pulse-dot 1.5s infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+.unlock-title {
+  margin: 0 0 10px;
+  font-family: Georgia, serif;
+  font-size: 36px;
+  font-weight: 400;
+  line-height: 1.1;
+  color: white;
+}
+
+.unlock-title em {
+  color: #f8c97e;
+  font-style: italic;
+}
+
+.unlock-subtitle {
+  margin: 0 0 24px;
+  color: #d1d8d7;
+  font-size: 14px;
+  line-height: 1.5;
+  max-width: 580px;
+}
+
+.unlock-progress-card {
+  padding: 20px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.unlock-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 18px;
+  text-align: center;
+}
+
+.stat-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 6px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.stat-num {
+  font-size: 26px;
+  font-weight: 800;
+  color: #fff;
+  font-family: Georgia, serif;
+}
+
+.stat-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #a4b3b0;
+  letter-spacing: 0.6px;
+}
+
+.progress-bar-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.progress-bar-track {
+  width: 100%;
+  height: 12px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--rose), #f59e0b, var(--teal));
+  position: relative;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.progress-bar-glow {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 20px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6));
+  filter: blur(2px);
+}
+
+.progress-milestones {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #8fa39f;
+  font-weight: 700;
+}
+
+.goal-flag {
+  color: #f8c97e;
+  font-weight: 800;
+}
+
+/* Viral Share Card */
+.unlock-viral-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 22px 24px;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid var(--line);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+}
+
+.viral-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.viral-icon {
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #fff3f1;
+  color: var(--rose);
+  display: grid;
+  place-items: center;
+}
+
+.viral-content h3 {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.viral-content p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.viral-actions {
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.whatsapp-share-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 16px;
+  border-radius: 7px;
+  background: #25d366;
+  color: white;
+  border: 0;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.whatsapp-share-btn:hover {
+  background: #20bd5a;
+  transform: translateY(-1px);
+}
+
+.copy-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 16px;
+  border-radius: 7px;
+  background: #f4efec;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.copy-link-btn:hover {
+  background: #e9e3df;
+  transform: translateY(-1px);
+}
+
+/* Teaser Grid & Cards */
+.teaser-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.teaser-header h2 {
+  margin: 4px 0 3px;
+  font-family: Georgia, serif;
+  font-size: 24px;
+  font-weight: 400;
+}
+
+.teaser-header p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.teaser-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+@media (max-width: 640px) {
+  .teaser-grid { grid-template-columns: 1fr; }
+  .unlock-viral-card { flex-direction: column; align-items: stretch; }
+  .viral-actions { flex-direction: column; }
+}
+
+.teaser-card {
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: white;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+}
+
+.teaser-photo-box {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1.05;
+  background: #202626;
+  overflow: hidden;
+}
+
+.teaser-blurred-img {
+  object-fit: cover;
+  filter: blur(14px) brightness(0.75);
+  transform: scale(1.1);
+}
+
+.mock-blurred-bg {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #a855f7 0%, #ec4899 50%, #3b82f6 100%);
+  filter: blur(20px);
+}
+
+.teaser-lock-badge {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: white;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(4px);
+}
+
+.teaser-lock-badge span {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.teaser-info {
+  padding: 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.teaser-tag-row {
+  display: flex;
+  gap: 5px;
+}
+
+.teaser-dept-tag {
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--teal);
+  background: var(--mint);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.teaser-gender-tag {
+  font-size: 9px;
+  font-weight: 700;
+  color: #71717a;
+  background: #f4f4f5;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.teaser-name-blurred {
+  margin: 3px 0 0;
+  font-size: 14px;
+  color: #a1a1aa;
+  letter-spacing: 2px;
+}
+
+.teaser-vibes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.teaser-vibe-pill {
+  font-size: 9px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: #fff1f2;
+  color: #be123c;
+  font-weight: 600;
+}
+
+.teaser-hint {
+  margin: 4px 0 0;
+  font-size: 10px;
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* Preview Bar */
+.unlock-preview-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 8px;
+  border: 1px dashed var(--line);
+  background: #faf8f6;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.preview-pill-link {
+  font-weight: 800;
+  color: var(--rose-deep);
+  background: #fff;
+  padding: 4px 10px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+}
+
+/* Unlocked Celebration Banner */
+.feed-unlocked-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 24px;
+  padding: 16px 20px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #10b98115, #06b6d415);
+  border: 1px solid #10b98150;
+}
+
+.unlocked-banner-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: #10b981;
+  color: white;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  white-space: nowrap;
+}
+
+.unlocked-banner-content h3 {
+  margin: 0 0 2px;
+  font-size: 14px;
+  font-weight: 800;
+  color: #065f46;
+}
+
+.unlocked-banner-content p {
+  margin: 0;
+  font-size: 11px;
+  color: #047857;
+}
+
+.preview-back-pill {
+  font-size: 10px;
+  font-weight: 700;
+  color: #065f46;
+  text-decoration: underline;
+  white-space: nowrap;
+}
+

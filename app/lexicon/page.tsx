@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { ArrowLeft, ArrowUpRight, BookOpen } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
+import { getCurrentProfile } from "@/lib/auth-session";
+
+export const dynamic = "force-dynamic";
 
 const terms = [
   { term: "Cuffing Season", type: "THE COZY ONE", meaning: "That semester-long pull toward a plus-one for chai runs, late lectures and the walk back from the library. Warmth, with intention." },
@@ -16,9 +19,10 @@ const terms = [
   { term: "Love Bombing", type: "BIG INTENSITY, EARLY ON", meaning: "Overwhelming affection or promises used to rush closeness or control. You’re allowed to slow things down and keep your boundaries." },
 ];
 
-export default function LexiconPage() {
+export default async function LexiconPage() {
+  const profile = await getCurrentProfile();
   return <>
-    <Navbar />
+    <Navbar signedIn={Boolean(profile)} />
     <main className="lexicon-page">
       <div className="lexicon-hero"><span className="eyebrow"><BookOpen size={14} /> THE CAMPUS KIN FIELD GUIDE</span><h1>The vibe<br /><em>dictionary.</em></h1><p>Dating language gets weird fast. Here’s what we mean when we ask what you’re looking for.</p><Link className="text-link" href="/auth">Set up your profile <ArrowUpRight size={16} /></Link></div>
       <div className="lexicon-list">{terms.map((entry, index) => <article className="lexicon-entry" key={entry.term}><span className="lexicon-index">{String(index + 1).padStart(2, "0")}</span><div><span className="eyebrow">{entry.type}</span><h2>{entry.term}</h2><p>{entry.meaning}</p></div></article>)}</div>

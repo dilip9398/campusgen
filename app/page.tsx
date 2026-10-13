@@ -2,6 +2,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowDown, ArrowUpRight, Heart, LockKeyhole, Sparkles } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
+import { getCurrentProfile } from "@/lib/auth-session";
+
+export const dynamic = "force-dynamic";
 
 const steps = [
   { number: "01", title: "Show your ID", text: "A verified Siddhartha email keeps this circle on campus." },
@@ -9,9 +12,10 @@ const steps = [
   { number: "03", title: "Like it both ways", text: "A mutual yes unlocks your chosen contact. No cold DMs, no guessing." },
 ];
 
-export default function Home() {
+export default async function Home() {
+  const profile = await getCurrentProfile();
   return <>
-    <Navbar />
+    <Navbar signedIn={Boolean(profile)} />
     <main>
       <section className="home-hero">
         <Image className="hero-image" src="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=2200&q=85" alt="College friends spending time together outdoors" fill priority unoptimized sizes="100vw" />
