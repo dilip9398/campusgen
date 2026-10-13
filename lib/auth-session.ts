@@ -8,7 +8,7 @@ export function resolveProfileGender(profile: { full_name?: string; gender?: str
   }
   const name = (profile.full_name || "").toLowerCase().trim();
   const femaleNames = ["aanya", "tara", "sia", "priya", "mira", "nila", "sneha", "ananya", "pooja", "divya", "kavya", "swathi", "deepa", "shreya", "anusha", "megha", "lakshmi"];
-  const maleNames = ["aarav", "kiran", "arjun", "dev", "vikram", "rohan", "rahul", "aditya", "varun", "siddharth", "karthik", "sai", "pranav", "nikhil", "ravi"];
+  const maleNames = ["aarav", "dilip", "kiran", "arjun", "dev", "vikram", "rohan", "rahul", "aditya", "varun", "siddharth", "karthik", "sai", "pranav", "nikhil", "ravi", "ajay", "vijay"];
 
   for (const f of femaleNames) {
     if (name.includes(f)) return "female";
@@ -33,6 +33,9 @@ export async function getCurrentProfile(): Promise<Profile | null> {
     const { data, error } = await supabase.rpc("get_my_profile");
     if (!error && data && typeof data === "object") {
       const raw = data as Record<string, any>;
+      const resolvedGender = (user.user_metadata?.gender as Gender) || (raw.gender as Gender) || resolveProfileGender(raw);
+      const resolvedInterestedIn = (user.user_metadata?.interested_in as any) || raw.interested_in || "opposite";
+
       return {
         id: user.id,
         email: user.email || raw.email || "",
@@ -41,8 +44,8 @@ export async function getCurrentProfile(): Promise<Profile | null> {
         grad_year: raw.grad_year || user.user_metadata?.grad_year || 2026,
         avatar_url: raw.avatar_url || user.user_metadata?.avatar_url || "https://api.dicebear.com/9.x/notionists/svg?seed=Student",
         bio: raw.bio || "",
-        gender: resolveProfileGender(raw),
-        interested_in: raw.interested_in || "opposite",
+        gender: resolvedGender,
+        interested_in: resolvedInterestedIn,
         status: raw.status || "single",
         hobbies: Array.isArray(raw.hobbies) ? raw.hobbies : [],
         relationship_vibes: Array.isArray(raw.relationship_vibes) ? raw.relationship_vibes : [],

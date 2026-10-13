@@ -59,13 +59,20 @@ async function normalizeAvatarUrl(rawUrl: string, nameFallback: string): Promise
   return url;
 }
 
+function cleanCollegeEmail(email: string): string {
+  let cleaned = email.trim().toLowerCase();
+  // Auto-correct common missing 'h' typo: @siddharta.co.in -> @siddhartha.co.in
+  cleaned = cleaned.replace(/@([a-z0-9-]+\.)*siddharta\.co\.in$/i, "@siddhartha.co.in");
+  return cleaned;
+}
+
 const eligibleEmail = /^[^\s@]+@([a-z0-9-]+\.)*siddhartha\.co\.in$/i;
 const statuses = new Set<RelationshipStatus>(["single", "it_is_complicated", "open_to_see"]);
 const validGenders = new Set<Gender>(["male", "female", "other"]);
 const validInterestedIn = new Set<InterestedIn>(["opposite", "female", "male", "all"]);
 
 export async function signUpWithPassword(_previous: FormState, formData: FormData): Promise<FormState> {
-  const email = formText(formData, "email").trim().toLowerCase();
+  const email = cleanCollegeEmail(formText(formData, "email"));
   const password = formText(formData, "password");
   const confirmation = formText(formData, "confirm_password");
   const birthDate = formText(formData, "birth_date");
@@ -128,7 +135,7 @@ export async function signUpWithPassword(_previous: FormState, formData: FormDat
 }
 
 export async function signInWithPassword(_previous: FormState, formData: FormData): Promise<FormState> {
-  const email = formText(formData, "email").trim().toLowerCase();
+  const email = cleanCollegeEmail(formText(formData, "email"));
   const password = formText(formData, "password");
 
   if (!eligibleEmail.test(email)) return { error: "Only valid Siddhartha college IDs (@siddhartha.co.in) are eligible." };
@@ -192,7 +199,7 @@ export async function changePassword(_previous: FormState, formData: FormData): 
 }
 
 export async function requestPasswordReset(_previous: FormState, formData: FormData): Promise<FormState> {
-  const email = formText(formData, "email").trim().toLowerCase();
+  const email = cleanCollegeEmail(formText(formData, "email"));
   if (!eligibleEmail.test(email)) {
     return { error: "Enter a valid @siddhartha.co.in college email." };
   }
@@ -264,6 +271,22 @@ export async function completeOnboarding(_previous: FormState, formData: FormDat
         console.error("profiles direct upsert failed:", directError);
         return { error: onboardingErrorMessage(rpcError.message || directError.message) };
       }
+    }
+
+    try {
+      await supabase.auth.updateUser({
+        data: {
+          full_name: payload.full_name,
+          gender: payload.gender,
+          interested_in: payload.interested_in,
+          birth_date: payload.birth_date,
+          major: payload.major,
+          grad_year: payload.grad_year,
+          avatar_url: payload.avatar_url,
+        },
+      });
+    } catch (metaErr) {
+      console.warn("Could not sync auth metadata:", metaErr);
     }
   } catch (err: unknown) {
     if (err && typeof err === "object" && "digest" in err && typeof (err as any).digest === "string" && (err as any).digest.startsWith("NEXT_REDIRECT")) {
