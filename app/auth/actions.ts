@@ -1,5 +1,8 @@
 "use server";
 
+import { promises as fs } from "fs";
+import path from "path";
+import crypto from "crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { campusHobbies, departments } from "@/lib/constants";
@@ -22,6 +25,38 @@ export interface FormState {
   message?: string;
   email?: string;
   needsOnboarding?: boolean;
+}
+
+async function normalizeAvatarUrl(rawUrl: string, nameFallback: string): Promise<string> {
+  let url = (rawUrl || "").trim();
+  if (url.startsWith("data:image/")) {
+    try {
+      const matches = url.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (matches && matches.length === 3) {
+        const mimeType = matches[1];
+        const base64Data = matches[2];
+        const buffer = Buffer.from(base64Data, "base64");
+        const ext = mimeType.includes("png") ? "png" : mimeType.includes("webp") ? "webp" : "jpg";
+        const filename = `${crypto.randomUUID()}.${ext}`;
+        const uploadsDir = path.join(process.cwd(), "public", "uploads");
+        await fs.mkdir(uploadsDir, { recursive: true });
+        await fs.writeFile(path.join(uploadsDir, filename), buffer);
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+        url = `${appUrl}/uploads/${filename}`;
+      }
+    } catch (e) {
+      console.warn("Failed to write data URI to disk:", e);
+    }
+  } else if (url.startsWith("/uploads/")) {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    url = `${appUrl}${url}`;
+  }
+
+  if (!url.startsWith("http://") && !url.startsWith("https://")) {
+    url = `https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(nameFallback || "Campus Kin")}`;
+  }
+
+  return url;
 }
 
 const eligibleEmail = /^[^\s@]+@([a-z0-9-]+\.)*siddhartha\.co\.in$/i;
@@ -202,8 +237,12 @@ export async function completeOnboarding(_previous: FormState, formData: FormDat
       return { error: "Only valid @siddhartha.co.in college IDs are eligible." };
     }
 
+    // Always normalize avatar to an absolute URL satisfying Supabase's check constraint
+    payload.avatar_url = await normalizeAvatarUrl(payload.avatar_url, payload.full_name);
+
     const { error: rpcError } = await supabase.rpc("save_my_profile", { payload });
     if (rpcError) {
+      console.error("save_my_profile RPC failed, trying fallback:", rpcError);
       // Direct upsert fallback
       const { error: directError } = await supabase.from("profiles").upsert({
         id: user.id,
@@ -222,14 +261,20 @@ export async function completeOnboarding(_previous: FormState, formData: FormDat
       });
 
       if (directError) {
+        console.error("profiles direct upsert failed:", directError);
         return { error: onboardingErrorMessage(rpcError.message || directError.message) };
       }
     }
-  } catch {
+  } catch (err: unknown) {
+    if (err && typeof err === "object" && "digest" in err && typeof (err as any).digest === "string" && (err as any).digest.startsWith("NEXT_REDIRECT")) {
+      throw err;
+    }
+    console.error("completeOnboarding error:", err);
     return { error: "We couldn't save your profile just now. Check your connection and try again." };
   }
 
   revalidatePath("/feed");
+  revalidatePath("/profile");
   redirect("/feed");
 }
 
@@ -240,7 +285,8 @@ export async function updateMyProfile(_previous: FormState, formData: FormData):
   const full_name = formText(formData, "full_name", current.full_name).trim();
   const major = formText(formData, "major", current.major);
   const grad_year = Number(formText(formData, "grad_year", String(current.grad_year)));
-  const avatar_url = formText(formData, "avatar_url", current.avatar_url).trim();
+  const raw_avatar_url = formText(formData, "avatar_url", current.avatar_url).trim();
+  const avatar_url = await normalizeAvatarUrl(raw_avatar_url, full_name);
   const bio = formText(formData, "bio", current.bio).trim();
   const gender = formText(formData, "gender", current.gender) as Gender;
   const interested_in = formText(formData, "interested_in", current.interested_in) as InterestedIn;
@@ -458,9 +504,10 @@ function parseStringArray(value: string): string[] | null {
 
 function isSecureUrl(value: string) {
   if (!value) return false;
-  if (value.startsWith("/uploads/") || value.startsWith("data:image/")) return true;
+  if (value.startsWith("/uploads/") || value.startsWith("data:image/") || value.startsWith("http://") || value.startsWith("https://")) return true;
   try {
-    return new URL(value).protocol === "https:";
+    const proto = new URL(value).protocol;
+    return proto === "https:" || proto === "http:";
   } catch {
     return false;
   }

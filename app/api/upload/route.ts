@@ -41,8 +41,11 @@ export async function POST(request: NextRequest) {
     const filePath = path.join(uploadsDir, filename);
     await fs.writeFile(filePath, buffer);
 
-    const publicUrl = `/uploads/${filename}`;
-    return NextResponse.json({ url: publicUrl, success: true });
+    const host = request.headers.get("x-forwarded-host") || request.headers.get("host") || "localhost:3000";
+    const proto = request.headers.get("x-forwarded-proto") || (host.startsWith("localhost") ? "http" : "https");
+    const origin = process.env.NEXT_PUBLIC_APP_URL || `${proto}://${host}`;
+    const publicUrl = `${origin}/uploads/${filename}`;
+    return NextResponse.json({ url: publicUrl, relativeUrl: `/uploads/${filename}`, success: true });
   } catch (error) {
     console.error("Upload failed:", error);
     return NextResponse.json(

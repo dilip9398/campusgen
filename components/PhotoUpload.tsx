@@ -1,8 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { useRef, useState } from "react";
-import { Camera, Image as ImageIcon, Loader2, Sparkles, Upload } from "lucide-react";
+import { Camera, Loader2, Sparkles } from "lucide-react";
 import { avatarPresets, avatarUrl } from "@/lib/constants";
 
 interface PhotoUploadProps {
@@ -12,7 +11,47 @@ interface PhotoUploadProps {
   label?: string;
 }
 
-export function PhotoUpload({ value, onChange, name = "avatar_url", label = "Your profile photo" }: PhotoUploadProps) {
+function compressImage(file: File, maxWidth = 500, quality = 0.82): Promise<{ blob: Blob; dataUrl: string }> {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      let { width, height } = img;
+      if (width > maxWidth || height > maxWidth) {
+        if (width > height) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        } else {
+          width = Math.round((width * maxWidth) / height);
+          height = maxWidth;
+        }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return reject(new Error("Canvas context unavailable"));
+      ctx.drawImage(img, 0, 0, width, height);
+      const dataUrl = canvas.toDataURL("image/jpeg", quality);
+      canvas.toBlob(
+        (blob) => {
+          if (blob) resolve({ blob, dataUrl });
+          else reject(new Error("Image compression failed"));
+        },
+        "image/jpeg",
+        quality
+      );
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Could not read image"));
+    };
+    img.src = objectUrl;
+  });
+}
+
+export function PhotoUpload({ value, onChange, name, label = "Your profile photo" }: PhotoUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -26,18 +65,15 @@ export function PhotoUpload({ value, onChange, name = "avatar_url", label = "You
     setUploadError("");
     setIsUploading(true);
 
-    // Instant local preview
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        onChange(reader.result);
-      }
-    };
-    reader.readAsDataURL(file);
-
     try {
+      // 1. Client-side canvas compression down to ~40KB
+      const { blob, dataUrl } = await compressImage(file);
+      // Immediate local preview so UI updates without lag
+      onChange(dataUrl);
+
+      // 2. Upload compressed blob to /api/upload
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", blob, "avatar.jpg");
 
       const res = await fetch("/api/upload", {
         method: "POST",
@@ -53,8 +89,8 @@ export function PhotoUpload({ value, onChange, name = "avatar_url", label = "You
         onChange(data.url);
       }
     } catch (err: unknown) {
-      console.warn("Upload endpoint warning, retaining local image preview:", err);
-      // Even if server upload has an issue, local data URL is already set and working
+      console.warn("Upload notice:", err);
+      // Keep working preview even if remote upload encountered a temporary hiccup
     } finally {
       setIsUploading(false);
       if (event.target) event.target.value = "";
@@ -66,13 +102,11 @@ export function PhotoUpload({ value, onChange, name = "avatar_url", label = "You
       <span className="form-label">{label}</span>
       <div className="photo-upload-main">
         <div className="photo-upload-preview">
-          <Image
+          <img
             src={preview}
             alt="Profile photo preview"
-            fill
-            unoptimized
-            sizes="110px"
             className="photo-upload-img"
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
           />
           {isUploading && (
             <div className="photo-upload-spinner" aria-label="Uploading...">
@@ -98,7 +132,7 @@ export function PhotoUpload({ value, onChange, name = "avatar_url", label = "You
             disabled={isUploading}
           >
             <Camera size={16} />
-            <span>Choose from device</span>
+            <span>{isUploading ? "Compressing & uploading..." : "Choose from device"}</span>
           </button>
 
           <p className="photo-upload-hint">
@@ -119,7 +153,7 @@ export function PhotoUpload({ value, onChange, name = "avatar_url", label = "You
                   aria-label={`Use ${preset} avatar`}
                   title={`${preset} avatar`}
                 >
-                  <Image src={avatarUrl(preset)} alt="" width={32} height={32} unoptimized />
+                  <img src={avatarUrl(preset)} alt="" width={32} height={32} style={{ borderRadius: "50%" }} />
                 </button>
               ))}
             </div>
@@ -127,7 +161,7 @@ export function PhotoUpload({ value, onChange, name = "avatar_url", label = "You
         </div>
       </div>
 
-      <input type="hidden" name={name} value={value} required />
+      {name && <input type="hidden" name={name} value={value} required />}
       {uploadError && <p className="form-alert">{uploadError}</p>}
     </div>
   );

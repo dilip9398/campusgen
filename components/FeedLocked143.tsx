@@ -132,11 +132,9 @@ export function FeedLocked143({
             teasers.map((t, idx) => (
               <div key={t.id || idx} className="teaser-card">
                 <div className="teaser-photo-box">
-                  <Image
+                  <img
                     src={t.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80"}
                     alt="Mystery student"
-                    fill
-                    unoptimized
                     className="teaser-blurred-img"
                   />
                   <div className="teaser-lock-badge">
@@ -150,7 +148,7 @@ export function FeedLocked143({
                     <span className="teaser-gender-tag">{t.gender === "female" ? "Woman" : "Man"}</span>
                   </div>
                   <h4 className="teaser-name-blurred">••••••••••••</h4>
-                  {t.relationship_vibes && t.relationship_vibes.length > 0 && (
+                  {Array.isArray(t.relationship_vibes) && t.relationship_vibes.length > 0 && (
                     <div className="teaser-vibes">
                       {t.relationship_vibes.slice(0, 2).map((v) => (
                         <span key={v} className="teaser-vibe-pill">{v}</span>

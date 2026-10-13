@@ -369,7 +369,6 @@ export function AuthWizard({
               <PhotoUpload
                 value={photo}
                 onChange={setPhoto}
-                name="avatar_url"
                 label="Profile photo (upload from device or pick preset)"
               />
 

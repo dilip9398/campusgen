@@ -21,19 +21,16 @@ export default async function ProfilePage() {
           <div className="profile-hero-banner" />
           <div className="profile-hero-content">
             <div className="profile-avatar-wrapper">
-              <Image
-                src={profile.avatar_url}
+              <img
+                src={profile.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80"}
                 alt={`${profile.full_name}'s avatar`}
-                fill
-                unoptimized
-                sizes="120px"
                 className="profile-avatar-img"
-                priority
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
               />
             </div>
             <div className="profile-hero-info">
               <div className="profile-hero-badges">
-                <span className="status-pill">{statusLabels[profile.status]}</span>
+                <span className="status-pill">{statusLabels[profile.status] || "Single"}</span>
                 <span className="gender-pill">
                   {profile.gender === "female" ? "♀ Woman" : profile.gender === "male" ? "♂ Man" : "Non-binary"}
                 </span>
