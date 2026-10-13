@@ -1,11 +1,8 @@
 "use server";
 
-import { promises as fs } from "fs";
-import path from "path";
-import crypto from "crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { campusHobbies, departments } from "@/lib/constants";
+import { avatarUrl, campusHobbies, departments } from "@/lib/constants";
 import {
   relationshipVibes,
   type ContactType,
@@ -27,33 +24,18 @@ export interface FormState {
   needsOnboarding?: boolean;
 }
 
-async function normalizeAvatarUrl(rawUrl: string, nameFallback: string): Promise<string> {
+function normalizeAvatarUrl(rawUrl: string, nameFallback: string): string {
   let url = (rawUrl || "").trim();
-  if (url.startsWith("data:image/")) {
-    try {
-      const matches = url.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-      if (matches && matches.length === 3) {
-        const mimeType = matches[1];
-        const base64Data = matches[2];
-        const buffer = Buffer.from(base64Data, "base64");
-        const ext = mimeType.includes("png") ? "png" : mimeType.includes("webp") ? "webp" : "jpg";
-        const filename = `${crypto.randomUUID()}.${ext}`;
-        const uploadsDir = path.join(process.cwd(), "public", "uploads");
-        await fs.mkdir(uploadsDir, { recursive: true });
-        await fs.writeFile(path.join(uploadsDir, filename), buffer);
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-        url = `${appUrl}/uploads/${filename}`;
-      }
-    } catch (e) {
-      console.warn("Failed to write data URI to disk:", e);
-    }
-  } else if (url.startsWith("/uploads/")) {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+  if (url.startsWith("/uploads/")) {
+    const appUrl =
+      process.env.NEXT_PUBLIC_APP_URL ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
     url = `${appUrl}${url}`;
   }
 
   if (!url.startsWith("http://") && !url.startsWith("https://")) {
-    url = `https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(nameFallback || "Campus Kin")}`;
+    url = avatarUrl(nameFallback || "Campus Kin");
   }
 
   return url;
@@ -245,7 +227,7 @@ export async function completeOnboarding(_previous: FormState, formData: FormDat
     }
 
     // Always normalize avatar to an absolute URL satisfying Supabase's check constraint
-    payload.avatar_url = await normalizeAvatarUrl(payload.avatar_url, payload.full_name);
+    payload.avatar_url = normalizeAvatarUrl(payload.avatar_url, payload.full_name);
 
     const { error: rpcError } = await supabase.rpc("save_my_profile", { payload });
     if (rpcError) {
@@ -309,7 +291,7 @@ export async function updateMyProfile(_previous: FormState, formData: FormData):
   const major = formText(formData, "major", current.major);
   const grad_year = Number(formText(formData, "grad_year", String(current.grad_year)));
   const raw_avatar_url = formText(formData, "avatar_url", current.avatar_url).trim();
-  const avatar_url = await normalizeAvatarUrl(raw_avatar_url, full_name);
+  const avatar_url = normalizeAvatarUrl(raw_avatar_url, full_name);
   const bio = formText(formData, "bio", current.bio).trim();
   const gender = formText(formData, "gender", current.gender) as Gender;
   const interested_in = formText(formData, "interested_in", current.interested_in) as InterestedIn;

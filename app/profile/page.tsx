@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { EditProfileForm } from "@/app/profile/EditProfileForm";
+import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { getCurrentProfile } from "@/lib/auth-session";
-import { avatarUrl, formatAvatarUrl, statusLabels } from "@/lib/constants";
+import { statusLabels } from "@/lib/constants";
 import { GraduationCap, ShieldCheck } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -20,16 +21,7 @@ export default async function ProfilePage() {
           <div className="profile-hero-banner" />
           <div className="profile-hero-content">
             <div className="profile-avatar-wrapper">
-              <img
-                src={formatAvatarUrl(profile.avatar_url, profile.full_name)}
-                alt={`${profile.full_name}'s avatar`}
-                className="profile-avatar-img"
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                onError={(e) => {
-                  e.currentTarget.onerror = null;
-                  e.currentTarget.src = avatarUrl(profile.full_name || "Campus Kin");
-                }}
-              />
+              <ProfileAvatar url={profile.avatar_url} name={profile.full_name} size={96} />
             </div>
             <div className="profile-hero-info">
               <div className="profile-hero-badges">
