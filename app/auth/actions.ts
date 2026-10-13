@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
 import { campusHobbies, departments } from "@/lib/constants";
 import {
   relationshipVibes,
@@ -16,14 +15,12 @@ import {
   type RelationshipVibe,
 } from "@/lib/types";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
-import { clearDemoProfile, getCurrentProfile, setDemoProfile } from "@/lib/auth-session";
-import { defaultUserDemoProfile, initialDemoStudents } from "@/lib/demo-data";
+import { getCurrentProfile } from "@/lib/auth-session";
 
 export interface FormState {
   error?: string;
   message?: string;
   email?: string;
-  requiresVerification?: boolean;
 }
 
 const eligibleEmail = /^[^\s@]+@siddhartha\.co\.in$/i;
@@ -31,55 +28,65 @@ const statuses = new Set<RelationshipStatus>(["single", "it_is_complicated", "op
 const validGenders = new Set<Gender>(["male", "female", "other"]);
 const validInterestedIn = new Set<InterestedIn>(["opposite", "female", "male", "all"]);
 
-export async function quickDemoLogin() {
-  await setDemoProfile(defaultUserDemoProfile);
-  redirect("/feed");
-}
-
 export async function signUpWithPassword(_previous: FormState, formData: FormData): Promise<FormState> {
   const email = formText(formData, "email").trim().toLowerCase();
   const password = formText(formData, "password");
   const confirmation = formText(formData, "confirm_password");
   const birthDate = formText(formData, "birth_date");
+  const full_name = formText(formData, "full_name").trim();
+  const major = formText(formData, "major", "CSE");
+  const grad_year = Number(formText(formData, "grad_year", "2026"));
+  const gender = formText(formData, "gender", "female") as Gender;
 
   if (!eligibleEmail.test(email)) {
     return { error: "Only valid @siddhartha.co.in college IDs are eligible." };
   }
-  if (password.length < 10 || password.length > 128) {
-    return { error: "Use a password between 10 and 128 characters." };
+  if (password.length < 8 || password.length > 128) {
+    return { error: "Use a password of at least 8 characters." };
   }
-  if (password !== confirmation) return { error: "Your passwords don't match." };
-  if (!isAdult(birthDate)) return { error: "You must be at least 18 to use Campus Kin." };
+  if (password !== confirmation) {
+    return { error: "Your passwords don't match." };
+  }
+  if (full_name && (full_name.length < 2 || full_name.length > 60)) {
+    return { error: "Please enter your full name (2 to 60 characters)." };
+  }
+  if (birthDate && !isAdult(birthDate)) {
+    return { error: "You must be at least 18 to use Campus Kin." };
+  }
 
   try {
     const supabase = await createSupabaseServerClient();
-    const { error } = await supabase.auth.signUp({
+    const metadata: Record<string, unknown> = {};
+    if (full_name) metadata.full_name = full_name;
+    if (birthDate) metadata.birth_date = birthDate;
+    if (major) metadata.major = major;
+    if (grad_year) metadata.grad_year = grad_year;
+    if (gender) metadata.gender = gender;
+
+    const { error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { birth_date: birthDate },
+        data: metadata,
       },
     });
-    if (error) {
-      if (/already registered|already exists/i.test(error.message)) {
+
+    if (signUpError) {
+      if (/already registered|already exists/i.test(signUpError.message)) {
         return { error: "That college email already has an account. Sign in with your password." };
       }
-      return { error: authErrorMessage(error.message) };
+      return { error: authErrorMessage(signUpError.message) };
     }
 
-    try {
-      await supabase.auth.signInWithPassword({ email, password });
-    } catch {}
-  } catch {
-    // Graceful fallback for local development
+    // Sign in immediately to establish user session cookies
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    if (signInError) {
+      console.warn("Auto sign-in notice:", signInError.message);
+    }
+  } catch (err) {
+    console.error("SignUp error:", err);
+    return { error: "Unable to connect to authentication server. Please check your connection." };
   }
-
-  await setDemoProfile({
-    ...defaultUserDemoProfile,
-    id: "user-" + Date.now(),
-    email,
-    birth_date: birthDate,
-  });
 
   return { email, message: "Account created successfully!" };
 }
@@ -87,27 +94,80 @@ export async function signUpWithPassword(_previous: FormState, formData: FormDat
 export async function signInWithPassword(_previous: FormState, formData: FormData): Promise<FormState> {
   const email = formText(formData, "email").trim().toLowerCase();
   const password = formText(formData, "password");
+
   if (!eligibleEmail.test(email)) return { error: "Only valid @siddhartha.co.in college IDs are eligible." };
   if (!password) return { error: "Enter your password to sign in." };
+  if (password.length < 8) return { error: "Password must be at least 8 characters." };
 
   try {
     const supabase = await createSupabaseServerClient();
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return { error: "That email and password combination didn't work." };
+    if (error) {
+      return { error: "Incorrect college email or password. Please check your credentials." };
+    }
   } catch {
-    return { error: "Authentication is temporarily unavailable. Check the Supabase settings and try again." };
+    return { error: "Authentication service is currently unavailable. Please try again." };
+  }
+
+  let hasProfile = false;
+  try {
+    const current = await getCurrentProfile();
+    if (current) hasProfile = true;
+  } catch {
+    hasProfile = false;
+  }
+
+  if (hasProfile) {
+    redirect("/feed");
+  } else {
+    redirect("/auth");
+  }
+}
+
+export async function changePassword(_previous: FormState, formData: FormData): Promise<FormState> {
+  const newPassword = formText(formData, "new_password");
+  const confirmPassword = formText(formData, "confirm_new_password");
+
+  if (newPassword.length < 8 || newPassword.length > 128) {
+    return { error: "New password must be at least 8 characters long." };
+  }
+  if (newPassword !== confirmPassword) {
+    return { error: "New passwords do not match." };
   }
 
   try {
     const supabase = await createSupabaseServerClient();
-    const { data } = await supabase.rpc("get_my_profile");
-    if (data) redirect("/feed");
-  } catch {}
-  redirect("/auth");
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) {
+      return { error: error.message || "Failed to update password. Please try again." };
+    }
+    return { message: "Password updated successfully!" };
+  } catch {
+    return { error: "Unable to update password right now. Please try again." };
+  }
+}
+
+export async function requestPasswordReset(_previous: FormState, formData: FormData): Promise<FormState> {
+  const email = formText(formData, "email").trim().toLowerCase();
+  if (!eligibleEmail.test(email)) {
+    return { error: "Enter a valid @siddhartha.co.in college email." };
+  }
+
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/profile`,
+    });
+    if (error) {
+      return { error: error.message || "Could not send reset link. Please try again." };
+    }
+    return { message: "A password reset link has been sent to your college inbox." };
+  } catch {
+    return { error: "Unable to process password reset request." };
+  }
 }
 
 export async function signOut() {
-  await clearDemoProfile();
   try {
     const supabase = await createSupabaseServerClient();
     await supabase.auth.signOut();
@@ -121,35 +181,43 @@ export async function completeOnboarding(_previous: FormState, formData: FormDat
 
   try {
     const supabase = await createSupabaseServerClient();
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (user && !userError) {
-      if (!user.email) {
-        return { error: "Please sign in before continuing." };
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      return { error: "Please sign in before completing your profile." };
+    }
+    if (!eligibleEmail.test(user.email || "")) {
+      return { error: "Only valid @siddhartha.co.in college IDs are eligible." };
+    }
+
+    const { error: rpcError } = await supabase.rpc("save_my_profile", { payload });
+    if (rpcError) {
+      // Direct upsert fallback
+      const { error: directError } = await supabase.from("profiles").upsert({
+        id: user.id,
+        email: user.email,
+        full_name: payload.full_name,
+        major: payload.major,
+        grad_year: payload.grad_year,
+        avatar_url: payload.avatar_url,
+        bio: payload.bio,
+        status: payload.status,
+        hobbies: payload.hobbies,
+        relationship_vibes: payload.relationship_vibes,
+        contact_type: payload.contact_type,
+        contact_handle: payload.contact_handle,
+        birth_date: payload.birth_date,
+      });
+
+      if (directError) {
+        return { error: onboardingErrorMessage(rpcError.message || directError.message) };
       }
-      if (!eligibleEmail.test(user.email)) {
-        return { error: "Only valid @siddhartha.co.in college IDs are eligible." };
-      }
-      const { error } = await supabase.rpc("save_my_profile", { payload });
-      if (error) return { error: onboardingErrorMessage(error.message) };
-    } else {
-      // In demo mode or if user is testing
-      const newProfile: Profile = {
-        id: "demo-user-" + Date.now(),
-        email: "student@siddhartha.co.in",
-        created_at: new Date().toISOString(),
-        ...payload,
-      };
-      await setDemoProfile(newProfile);
     }
   } catch {
-    // If Supabase call failed, save locally in demo session so onboarding succeeds
-    const newProfile: Profile = {
-      id: "demo-user-" + Date.now(),
-      email: "student@siddhartha.co.in",
-      created_at: new Date().toISOString(),
-      ...payload,
-    };
-    await setDemoProfile(newProfile);
+    return { error: "We couldn't save your profile just now. Check your connection and try again." };
   }
 
   revalidatePath("/feed");
@@ -209,15 +277,34 @@ export async function updateMyProfile(_previous: FormState, formData: FormData):
 
   try {
     const supabase = await createSupabaseServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase.rpc("save_my_profile", { payload: updatedProfile });
-    }
-  } catch {
-    // If Supabase is unavailable, demo session persists
-  }
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  await setDemoProfile(updatedProfile);
+    if (user) {
+      const { error: rpcError } = await supabase.rpc("save_my_profile", { payload: updatedProfile });
+      if (rpcError) {
+        await supabase.from("profiles").upsert({
+          id: user.id,
+          email: user.email,
+          full_name,
+          major,
+          grad_year,
+          avatar_url,
+          bio,
+          status,
+          hobbies,
+          relationship_vibes,
+          contact_type,
+          contact_handle,
+          birth_date: current.birth_date,
+        });
+      }
+    }
+  } catch (err) {
+    console.error("Profile update error:", err);
+    return { error: "Failed to save profile changes. Please try again." };
+  }
 
   revalidatePath("/profile");
   revalidatePath("/feed");
@@ -225,81 +312,40 @@ export async function updateMyProfile(_previous: FormState, formData: FormData):
 }
 
 export async function likeProfile(profileId: string): Promise<{ error?: string; match?: Match }> {
-  const current = await getCurrentProfile();
-  if (!current) return { error: "Sign in to like a profile." };
-
   try {
     const supabase = await createSupabaseServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { data: isMatch, error } = await supabase.rpc("like_profile", { p_receiver_id: profileId });
-      if (!error) {
-        revalidatePath("/feed");
-        if (isMatch) {
-          const { data } = await supabase.rpc("get_my_matches");
-          const match = (data as Match[] | null)?.find((item) => item.profile_id === profileId);
-          revalidatePath("/matches");
-          return { match };
-        }
-        return {};
-      }
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { error: "Sign in to like a profile." };
+
+    const { data: isMatch, error } = await supabase.rpc("like_profile", { p_receiver_id: profileId });
+    if (error) return { error: "That like couldn't be saved. Please try again." };
+
+    revalidatePath("/feed");
+
+    if (isMatch) {
+      const { data } = await supabase.rpc("get_my_matches");
+      const match = (data as Match[] | null)?.find((item) => item.profile_id === profileId);
+      revalidatePath("/matches");
+      return { match };
     }
-  } catch {}
-
-  // Fallback for local demo
-  const cookieStore = await cookies();
-  const demoLikes = cookieStore.get("campuskin_demo_likes")?.value;
-  const likes: string[] = demoLikes ? JSON.parse(demoLikes) : [];
-  if (!likes.includes(profileId)) {
-    likes.push(profileId);
-    cookieStore.set("campuskin_demo_likes", JSON.stringify(likes), { path: "/" });
+    return {};
+  } catch {
+    return { error: "Campus Kin is temporarily unavailable. Please try again." };
   }
-
-  const target = initialDemoStudents.find((student) => student.id === profileId);
-  if (target) {
-    const match: Match = {
-      id: target.id,
-      profile_id: target.id,
-      full_name: target.full_name,
-      major: target.major,
-      grad_year: target.grad_year,
-      avatar_url: target.avatar_url,
-      bio: target.bio,
-      gender: target.gender,
-      status: target.status,
-      hobbies: target.hobbies,
-      relationship_vibes: target.relationship_vibes,
-      matched_at: new Date().toISOString(),
-      contact_type: target.contact_type,
-      contact_handle: target.contact_handle,
-    };
-    return { match };
-  }
-
-  return {};
 }
 
 export async function passProfile(profileId: string): Promise<{ error?: string }> {
   try {
     const supabase = await createSupabaseServerClient();
     const { error } = await supabase.rpc("pass_profile", { p_receiver_id: profileId });
-    if (!error) {
-      revalidatePath("/feed");
-      return {};
-    }
-  } catch {}
-
-  // Local demo fallback
-  const cookieStore = await cookies();
-  const demoPasses = cookieStore.get("campuskin_demo_passes")?.value;
-  const passes: string[] = demoPasses ? JSON.parse(demoPasses) : [];
-  if (!passes.includes(profileId)) {
-    passes.push(profileId);
-    cookieStore.set("campuskin_demo_passes", JSON.stringify(passes), { path: "/" });
+    if (error) return { error: "That profile couldn't be passed. Please try again." };
+    revalidatePath("/feed");
+    return {};
+  } catch {
+    return { error: "Campus Kin is temporarily unavailable. Please try again." };
   }
-
-  revalidatePath("/feed");
-  return {};
 }
 
 function isAdult(value: string) {

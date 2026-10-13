@@ -4,7 +4,7 @@ import { Navbar } from "@/components/Navbar";
 import { EditProfileForm } from "@/app/profile/EditProfileForm";
 import { getCurrentProfile } from "@/lib/auth-session";
 import { statusLabels } from "@/lib/constants";
-import { Calendar, GraduationCap, Mail, Sparkles, User } from "lucide-react";
+import { Calendar, GraduationCap, ShieldCheck, Sparkles, User } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -42,9 +42,11 @@ export default async function ProfilePage() {
                 </span>
               </div>
               <h1>{profile.full_name}</h1>
-              <p className="profile-hero-email">
-                <Mail size={13} /> {profile.email}
-              </p>
+              <div className="profile-hero-verified">
+                <ShieldCheck size={14} />
+                <span>Verified Siddhartha Student</span>
+                <span className="privacy-pill">Private Account</span>
+              </div>
               {profile.bio && <p className="profile-hero-bio">&ldquo;{profile.bio}&rdquo;</p>}
             </div>
           </div>

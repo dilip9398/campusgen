@@ -1,32 +1,32 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
-import { ArrowRight, LockKeyhole, Sparkles } from "lucide-react";
-import { quickDemoLogin, signInWithPassword, signUpWithPassword } from "@/app/auth/actions";
+import { useActionState, useEffect, useState } from "react";
+import { ArrowRight, KeyRound, LockKeyhole, Mail, ShieldCheck } from "lucide-react";
+import { requestPasswordReset, signInWithPassword, signUpWithPassword } from "@/app/auth/actions";
 import type { FormState } from "@/app/auth/actions";
 
 type AuthMode = "signup" | "signin";
-type FormAction = (formData: FormData) => void | Promise<void>;
 
 const input =
   "w-full rounded-lg border border-[var(--line)] bg-white px-4 py-3 text-sm text-[var(--ink)] outline-none transition focus:border-[var(--rose)] focus:ring-2 focus:ring-[var(--rose)]/15";
-const submitLabels: Record<AuthMode, string> = { signup: "Create account", signin: "Sign in" };
 
 export function CollegeAuthPanel({
-  initialBirthDate,
   onAccountCreated,
 }: Readonly<{
-  initialBirthDate: string;
-  onAccountCreated?: (birthDate: string, email: string) => void;
+  initialBirthDate?: string;
+  onAccountCreated?: (details: { email: string }) => void;
 }>) {
   const [mode, setMode] = useState<AuthMode>("signup");
+  const [showForgot, setShowForgot] = useState(false);
   const [signup, signupAction, signupPending] = useActionState(signUpWithPassword, {} as FormState);
   const [signin, signinAction, signinPending] = useActionState(signInWithPassword, {} as FormState);
-  const birthDateRef = useRef("");
+  const [resetState, resetAction, resetPending] = useActionState(requestPasswordReset, {} as FormState);
 
   useEffect(() => {
     if (signup.message && !signup.error) {
-      onAccountCreated?.(birthDateRef.current, signup.email ?? "");
+      onAccountCreated?.({
+        email: signup.email ?? "",
+      });
     }
   }, [signup.message, signup.error, signup.email, onAccountCreated]);
 
@@ -38,7 +38,10 @@ export function CollegeAuthPanel({
           role="tab"
           aria-selected={mode === "signup"}
           className={mode === "signup" ? "mode-option is-selected" : "mode-option"}
-          onClick={() => setMode("signup")}
+          onClick={() => {
+            setMode("signup");
+            setShowForgot(false);
+          }}
         >
           Create account
         </button>
@@ -47,130 +50,201 @@ export function CollegeAuthPanel({
           role="tab"
           aria-selected={mode === "signin"}
           className={mode === "signin" ? "mode-option is-selected" : "mode-option"}
-          onClick={() => setMode("signin")}
+          onClick={() => {
+            setMode("signin");
+            setShowForgot(false);
+          }}
         >
           Sign in
         </button>
       </div>
 
-      <CredentialsForm
-        mode={mode}
-        action={mode === "signup" ? signupAction : signinAction}
-        state={mode === "signup" ? signup : signin}
-        pending={mode === "signup" ? signupPending : signinPending}
-        initialBirthDate={initialBirthDate}
-        onBirthDateChange={(val) => {
-          birthDateRef.current = val;
-        }}
-      />
-    </section>
-  );
-}
-
-function CredentialsForm({
-  mode,
-  action,
-  state,
-  pending,
-  initialBirthDate,
-  onBirthDateChange,
-}: Readonly<{
-  mode: AuthMode;
-  action: FormAction;
-  state: FormState;
-  pending: boolean;
-  initialBirthDate: string;
-  onBirthDateChange?: (val: string) => void;
-}>) {
-  const submitLabel = pending ? "Working..." : submitLabels[mode];
-
-  return (
-    <form action={action} className="form-stack">
-      <label className="form-label" htmlFor="college-email">
-        College email
-      </label>
-      <input
-        id="college-email"
-        className={input}
-        type="email"
-        name="email"
-        autoComplete="email"
-        placeholder="you@siddhartha.co.in"
-        required
-      />
-      <p className="field-note">Only valid @siddhartha.co.in college IDs are eligible.</p>
-
-      <label className="form-label" htmlFor="password">
-        Password
-      </label>
-      <input
-        id="password"
-        className={input}
-        type="password"
-        name="password"
-        minLength={mode === "signup" ? 10 : 1}
-        maxLength={128}
-        autoComplete={mode === "signup" ? "new-password" : "current-password"}
-        required
-      />
-
-      {mode === "signup" && (
-        <>
-          <label className="form-label" htmlFor="confirm-password">
-            Confirm password
+      {showForgot ? (
+        <form action={resetAction} className="form-stack">
+          <div className="forgot-header">
+            <h3>Reset your password</h3>
+            <p>Enter your college email to receive a secure reset link.</p>
+          </div>
+          <label className="form-label" htmlFor="reset-email">
+            College email
           </label>
           <input
-            id="confirm-password"
+            id="reset-email"
+            className={input}
+            type="email"
+            name="email"
+            placeholder="you@siddhartha.co.in"
+            required
+          />
+          {resetState.error && (
+            <p className="form-alert" role="alert">
+              {resetState.error}
+            </p>
+          )}
+          {resetState.message && <output className="form-success">{resetState.message}</output>}
+          <button
+            className="button button-primary button-wide"
+            type="submit"
+            disabled={resetPending}
+          >
+            {resetPending ? "Sending link..." : "Send reset link"}
+            <ArrowRight size={17} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            className="otp-back"
+            onClick={() => setShowForgot(false)}
+          >
+            Back to sign in
+          </button>
+        </form>
+      ) : mode === "signup" ? (
+        <form action={signupAction} className="form-stack">
+          <div className="step-prompt-header">
+            <span className="step-subkicker">STEP 1 OF 4</span>
+            <h2 className="step-panel-title">Start with your College ID</h2>
+            <p className="step-panel-desc">
+              Create your account with your official Siddhartha college email and an 8-character password.
+            </p>
+          </div>
+
+          <label className="form-label" htmlFor="college-email">
+            College email
+          </label>
+          <input
+            id="college-email"
+            className={input}
+            type="email"
+            name="email"
+            autoComplete="email"
+            placeholder="you@siddhartha.co.in"
+            required
+          />
+          <p className="field-note">Exclusively for students of Siddhartha Educational Institutions.</p>
+
+          <div className="field-grid">
+            <div>
+              <label className="form-label" htmlFor="password">
+                Password <span className="label-aside">8+ chars</span>
+              </label>
+              <input
+                id="password"
+                className={input}
+                type="password"
+                name="password"
+                minLength={8}
+                maxLength={128}
+                autoComplete="new-password"
+                placeholder="At least 8 characters"
+                required
+              />
+            </div>
+            <div>
+              <label className="form-label" htmlFor="confirm-password">
+                Confirm password
+              </label>
+              <input
+                id="confirm-password"
+                className={input}
+                type="password"
+                name="confirm_password"
+                minLength={8}
+                maxLength={128}
+                autoComplete="new-password"
+                placeholder="Repeat password"
+                required
+              />
+            </div>
+          </div>
+
+          {signup.error && (
+            <p className="form-alert" role="alert">
+              {signup.error}
+            </p>
+          )}
+          {signup.message && <output className="form-success">{signup.message}</output>}
+
+          <button
+            className="button button-primary button-wide"
+            type="submit"
+            disabled={signupPending}
+          >
+            {signupPending ? "Creating account..." : "Continue to Details"}
+            <ArrowRight size={17} aria-hidden="true" />
+          </button>
+
+          <p className="auth-footnote">
+            <LockKeyhole size={14} aria-hidden="true" /> Your email is kept strictly private and never shown to other students.
+          </p>
+        </form>
+      ) : (
+        <form action={signinAction} className="form-stack">
+          <div className="step-prompt-header">
+            <span className="step-subkicker">WELCOME BACK</span>
+            <h2 className="step-panel-title">Sign into Campus Kin</h2>
+            <p className="step-panel-desc">
+              Sign in with your verified Siddhartha email and password.
+            </p>
+          </div>
+
+          <label className="form-label" htmlFor="signin-email">
+            College email
+          </label>
+          <input
+            id="signin-email"
+            className={input}
+            type="email"
+            name="email"
+            autoComplete="email"
+            placeholder="you@siddhartha.co.in"
+            required
+          />
+
+          <div className="label-row-between">
+            <label className="form-label" htmlFor="signin-password">
+              Password
+            </label>
+            <button
+              type="button"
+              className="text-subtle-btn"
+              onClick={() => setShowForgot(true)}
+            >
+              Forgot password?
+            </button>
+          </div>
+          <input
+            id="signin-password"
             className={input}
             type="password"
-            name="confirm_password"
-            minLength={10}
+            name="password"
+            minLength={8}
             maxLength={128}
-            autoComplete="new-password"
+            autoComplete="current-password"
+            placeholder="Enter your password"
             required
           />
 
-          <label className="form-label" htmlFor="birth-date">
-            Date of birth <span className="label-aside">18+ only</span>
-          </label>
-          <input
-            id="birth-date"
-            className={input}
-            type="date"
-            name="birth_date"
-            max={new Date(new Date().setFullYear(new Date().getFullYear() - 18))
-              .toISOString()
-              .slice(0, 10)}
-            defaultValue={initialBirthDate}
-            onChange={(e) => onBirthDateChange?.(e.target.value)}
-            required
-          />
-        </>
+          {signin.error && (
+            <p className="form-alert" role="alert">
+              {signin.error}
+            </p>
+          )}
+          {signin.message && <output className="form-success">{signin.message}</output>}
+
+          <button
+            className="button button-primary button-wide"
+            type="submit"
+            disabled={signinPending}
+          >
+            {signinPending ? "Signing in..." : "Sign in to Campus"}
+            <ArrowRight size={17} aria-hidden="true" />
+          </button>
+
+          <p className="auth-footnote">
+            <ShieldCheck size={14} aria-hidden="true" /> Siddhartha student accounts only. Email remains private.
+          </p>
+        </form>
       )}
-
-      {state.error && (
-        <p className="form-alert" role="alert">
-          {state.error}
-        </p>
-      )}
-      {state.message && <output className="form-success">{state.message}</output>}
-
-      <button className="button button-primary button-wide" type="submit" disabled={pending}>
-        {submitLabel}
-        <ArrowRight size={17} aria-hidden="true" />
-      </button>
-
-      <div className="demo-auth-divider">
-        <span>OR TEST THE APP</span>
-      </div>
-      <button formAction={quickDemoLogin} type="submit" className="button button-secondary button-wide">
-        <Sparkles size={16} /> Instant Demo Account
-      </button>
-
-      <p className="auth-footnote">
-        <LockKeyhole size={14} aria-hidden="true" /> Your email is verified, never shown on your
-        profile.
-      </p>
-    </form>
+    </section>
   );
 }

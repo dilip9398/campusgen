@@ -1,62 +1,91 @@
-import { cookies } from "next/headers";
-import { defaultUserDemoProfile, initialDemoStudents } from "@/lib/demo-data";
 import { getOppositeGender } from "@/lib/constants";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import type { DiscoveryProfile, Gender, Profile } from "@/lib/types";
 
-const DEMO_COOKIE = "campuskin_demo_profile";
-const DEMO_LIKES_COOKIE = "campuskin_demo_likes";
-const DEMO_PASSES_COOKIE = "campuskin_demo_passes";
+export function resolveProfileGender(profile: { full_name?: string; gender?: string }): Gender {
+  if (profile.gender === "male" || profile.gender === "female" || profile.gender === "other") {
+    return profile.gender as Gender;
+  }
+  const name = (profile.full_name || "").toLowerCase().trim();
+  const femaleNames = ["aanya", "tara", "sia", "priya", "mira", "nila", "sneha", "ananya", "pooja", "divya", "kavya", "swathi", "deepa", "shreya", "anusha", "megha", "lakshmi"];
+  const maleNames = ["aarav", "kiran", "arjun", "dev", "vikram", "rohan", "rahul", "aditya", "varun", "siddharth", "karthik", "sai", "pranav", "nikhil", "ravi"];
+
+  for (const f of femaleNames) {
+    if (name.includes(f)) return "female";
+  }
+  for (const m of maleNames) {
+    if (name.includes(m)) return "male";
+  }
+  return "female";
+}
 
 export async function getCurrentProfile(): Promise<Profile | null> {
-  const cookieStore = await cookies();
-  const demoCookie = cookieStore.get(DEMO_COOKIE);
-
-  if (demoCookie?.value) {
-    try {
-      const parsed = JSON.parse(demoCookie.value);
-      return parsed as Profile;
-    } catch {
-      // Fall through to Supabase
-    }
-  }
-
   try {
     const supabase = await createSupabaseServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return null;
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
 
+    if (userError || !user) return null;
+
+    // Try get_my_profile RPC
     const { data, error } = await supabase.rpc("get_my_profile");
-    if (error || !data) return null;
+    if (!error && data && typeof data === "object") {
+      const raw = data as Record<string, any>;
+      return {
+        id: user.id,
+        email: user.email || raw.email || "",
+        full_name: raw.full_name || user.user_metadata?.full_name || "Student",
+        major: raw.major || user.user_metadata?.major || "CSE",
+        grad_year: raw.grad_year || user.user_metadata?.grad_year || 2026,
+        avatar_url: raw.avatar_url || user.user_metadata?.avatar_url || "https://api.dicebear.com/9.x/notionists/svg?seed=Student",
+        bio: raw.bio || "",
+        gender: resolveProfileGender(raw),
+        interested_in: raw.interested_in || "opposite",
+        status: raw.status || "single",
+        hobbies: Array.isArray(raw.hobbies) ? raw.hobbies : [],
+        relationship_vibes: Array.isArray(raw.relationship_vibes) ? raw.relationship_vibes : [],
+        contact_type: raw.contact_type || "instagram",
+        contact_handle: raw.contact_handle || "",
+        birth_date: raw.birth_date || user.user_metadata?.birth_date || "2002-01-01",
+        created_at: raw.created_at || new Date().toISOString(),
+      };
+    }
 
-    // Ensure gender fields exist with reasonable fallbacks
-    return {
-      gender: "male",
-      interested_in: "opposite",
-      ...data,
-    } as Profile;
-  } catch {
-    // If Supabase is unreachable and demo cookie was not explicitly set,
-    // in development return null so auth page can display login or demo option.
+    // Try direct select from profiles table
+    const { data: directProfile, error: directError } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (!directError && directProfile) {
+      return {
+        id: user.id,
+        email: user.email || directProfile.email || "",
+        full_name: directProfile.full_name,
+        major: directProfile.major,
+        grad_year: directProfile.grad_year,
+        avatar_url: directProfile.avatar_url,
+        bio: directProfile.bio || "",
+        gender: resolveProfileGender(directProfile),
+        interested_in: directProfile.interested_in || "opposite",
+        status: directProfile.status || "single",
+        hobbies: Array.isArray(directProfile.hobbies) ? directProfile.hobbies : [],
+        relationship_vibes: Array.isArray(directProfile.relationship_vibes) ? directProfile.relationship_vibes : [],
+        contact_type: directProfile.contact_type || "instagram",
+        contact_handle: directProfile.contact_handle || "",
+        birth_date: directProfile.birth_date || user.user_metadata?.birth_date || "2002-01-01",
+        created_at: directProfile.created_at || new Date().toISOString(),
+      };
+    }
+
+    return null;
+  } catch (error) {
+    console.error("getCurrentProfile error:", error);
     return null;
   }
-}
-
-export async function setDemoProfile(profile: Profile) {
-  const cookieStore = await cookies();
-  cookieStore.set(DEMO_COOKIE, JSON.stringify(profile), {
-    path: "/",
-    httpOnly: true,
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 7, // 7 days
-  });
-}
-
-export async function clearDemoProfile() {
-  const cookieStore = await cookies();
-  cookieStore.delete(DEMO_COOKIE);
-  cookieStore.delete(DEMO_LIKES_COOKIE);
-  cookieStore.delete(DEMO_PASSES_COOKIE);
 }
 
 export async function getFeedProfilesList(
@@ -65,40 +94,42 @@ export async function getFeedProfilesList(
   filterVibe: string,
   filterGender: string
 ): Promise<DiscoveryProfile[]> {
+  const supabase = await createSupabaseServerClient();
+  let rawProfiles: any[] = [];
+
+  // Try RPC first
   try {
-    const supabase = await createSupabaseServerClient();
     const { data, error } = await supabase.rpc("get_feed_profiles", {
       p_department: filterDept || null,
       p_vibe: filterVibe || null,
-      p_gender: filterGender || null,
     });
-
     if (!error && Array.isArray(data) && data.length > 0) {
-      return data.map((item) => ({
-        ...item,
-        gender: item.gender || "female",
-      }));
+      rawProfiles = data;
     }
-  } catch {
-    // Fall back to demo dataset
-  }
+  } catch {}
 
-  const cookieStore = await cookies();
-  const passedIds = new Set<string>();
-  const likedIds = new Set<string>();
-
-  const demoPasses = cookieStore.get(DEMO_PASSES_COOKIE)?.value;
-  if (demoPasses) {
+  // If RPC returned empty or errored, query public.profiles directly
+  if (rawProfiles.length === 0) {
     try {
-      (JSON.parse(demoPasses) as string[]).forEach((id) => passedIds.add(id));
-    } catch {}
-  }
+      let query = supabase
+        .from("profiles")
+        .select("id, full_name, major, grad_year, avatar_url, bio, status, hobbies, relationship_vibes")
+        .neq("id", currentProfile.id);
 
-  const demoLikes = cookieStore.get(DEMO_LIKES_COOKIE)?.value;
-  if (demoLikes) {
-    try {
-      (JSON.parse(demoLikes) as string[]).forEach((id) => likedIds.add(id));
-    } catch {}
+      if (filterDept) {
+        query = query.eq("major", filterDept);
+      }
+      if (filterVibe) {
+        query = query.contains("relationship_vibes", [filterVibe]);
+      }
+
+      const { data: dbProfiles, error: dbError } = await query.limit(40);
+      if (!dbError && Array.isArray(dbProfiles)) {
+        rawProfiles = dbProfiles;
+      }
+    } catch (e) {
+      console.error("Error fetching profiles from DB:", e);
+    }
   }
 
   // Determine target gender for opposite gender feature
@@ -109,22 +140,26 @@ export async function getFeedProfilesList(
     targetGender = filterGender as Gender;
   }
 
-  return initialDemoStudents
-    .filter((student) => student.id !== currentProfile.id)
-    .filter((student) => !passedIds.has(student.id) && !likedIds.has(student.id))
-    .filter((student) => (filterDept ? student.major === filterDept : true))
-    .filter((student) => (filterVibe ? student.relationship_vibes.includes(filterVibe as any) : true))
-    .filter((student) => (targetGender ? student.gender === targetGender : true))
-    .map((student) => ({
-      id: student.id,
-      full_name: student.full_name,
-      major: student.major,
-      grad_year: student.grad_year,
-      avatar_url: student.avatar_url,
-      bio: student.bio,
-      gender: student.gender,
-      status: student.status,
-      hobbies: student.hobbies,
-      relationship_vibes: student.relationship_vibes,
-    }));
+  return rawProfiles
+    .map((p) => {
+      const g = resolveProfileGender(p);
+      return {
+        id: p.id,
+        full_name: p.full_name,
+        major: p.major,
+        grad_year: p.grad_year,
+        avatar_url: p.avatar_url,
+        bio: p.bio || "",
+        gender: g,
+        status: p.status || "single",
+        hobbies: Array.isArray(p.hobbies) ? p.hobbies : [],
+        relationship_vibes: Array.isArray(p.relationship_vibes) ? p.relationship_vibes : [],
+      };
+    })
+    .filter((p) => {
+      if (targetGender && p.gender !== targetGender) {
+        return false;
+      }
+      return true;
+    });
 }

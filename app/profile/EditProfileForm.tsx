@@ -2,17 +2,17 @@
 
 import { useActionState, useEffect, useState } from "react";
 import {
-  ArrowRight,
   Check,
   Edit3,
   Heart,
+  KeyRound,
   LockKeyhole,
   Save,
+  ShieldCheck,
   Sparkles,
-  User,
   X,
 } from "lucide-react";
-import { updateMyProfile } from "@/app/auth/actions";
+import { changePassword, updateMyProfile } from "@/app/auth/actions";
 import type { FormState } from "@/app/auth/actions";
 import { PhotoUpload } from "@/components/PhotoUpload";
 import {
@@ -39,6 +39,13 @@ const statusOptions: { value: RelationshipStatus; label: string }[] = [
   { value: "it_is_complicated", label: statusLabels.it_is_complicated },
   { value: "open_to_see", label: statusLabels.open_to_see },
 ];
+
+function maskEmail(email: string) {
+  if (!email || !email.includes("@")) return "Private verified ID";
+  const [local, domain] = email.split("@");
+  if (local.length <= 2) return `${local}***@${domain}`;
+  return `${local.slice(0, 2)}•••••@${domain}`;
+}
 
 export function EditProfileForm({ profile }: { profile: Profile }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -90,320 +97,441 @@ export function EditProfileForm({ profile }: { profile: Profile }) {
   }
 
   return (
-    <div className="profile-edit-section">
+    <div className="profile-container-stack">
+      {/* Profile Details Card */}
+      <div className="profile-edit-section">
+        <div className="profile-section-header">
+          <div>
+            <h2>Your Profile Details</h2>
+            <p>Manage your campus hobbies, relationship status, and photo.</p>
+          </div>
+          <button
+            type="button"
+            className="button button-secondary edit-toggle-btn"
+            onClick={() => setIsEditing(!isEditing)}
+          >
+            {isEditing ? (
+              <>
+                <X size={16} /> Cancel Editing
+              </>
+            ) : (
+              <>
+                <Edit3 size={16} /> Edit Profile
+              </>
+            )}
+          </button>
+        </div>
+
+        {notice && <output className="toast">{notice}</output>}
+        {state.error && <p className="form-alert" role="alert">{state.error}</p>}
+
+        {!isEditing ? (
+          <div className="profile-view-grid">
+            <div className="profile-card-preview">
+              <div className="info-group">
+                <span className="info-label">RELATIONSHIP STATUS</span>
+                <div className="status-badge-row">
+                  <span className="status-pill is-current">{statusLabels[status]}</span>
+                </div>
+              </div>
+
+              <div className="info-group">
+                <span className="info-label">GENDER & PREFERENCE</span>
+                <div className="gender-preference-tags">
+                  <span className="tag-pill">
+                    {gender === "female" ? "♀ Woman" : gender === "male" ? "♂ Man" : "Non-binary"}
+                  </span>
+                  <span className="tag-pill highlight">
+                    Feed:{" "}
+                    {interestedIn === "opposite"
+                      ? "Opposite gender"
+                      : interestedIn === "female"
+                      ? "Women"
+                      : interestedIn === "male"
+                      ? "Men"
+                      : "Everyone"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="info-group">
+                <span className="info-label">
+                  CAMPUS INTERESTS & HOBBIES ({hobbies.length}/5)
+                </span>
+                <div className="tag-row hobby-tags">
+                  {hobbies.length > 0 ? (
+                    hobbies.map((h) => (
+                      <span className="hobby-tag" key={h}>
+                        {h}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="empty-hint">
+                      No hobbies added yet. Click &quot;Edit Profile&quot; to pick some!
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="info-group">
+                <span className="info-label">
+                  RELATIONSHIP INTENTIONS ({vibes.length}/2)
+                </span>
+                <div className="tag-row">
+                  {vibes.length > 0 ? (
+                    vibes.map((v) => (
+                      <span className="vibe-tag" key={v}>
+                        {v}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="empty-hint">No intentions picked yet.</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Private Email Protection Note */}
+              <div className="info-group">
+                <span className="info-label">COLLEGE IDENTIFIER (ENCRYPTED & PRIVATE)</span>
+                <div className="contact-preview-box">
+                  <ShieldCheck size={16} />
+                  <span>
+                    {maskEmail(profile.email)} <strong className="privacy-chip">Private</strong>
+                  </span>
+                </div>
+                <p className="field-note">
+                  Your Siddhartha college email is never shared with or visible to other students.
+                </p>
+              </div>
+
+              <div className="info-group">
+                <span className="info-label">PRIVATE CONTACT (REVEALED ONLY ON MUTUAL MATCH)</span>
+                <div className="contact-preview-box">
+                  <LockKeyhole size={15} />
+                  <span>
+                    {profile.contact_type === "instagram" ? "Instagram: " : "WhatsApp: "}
+                    <strong>{profile.contact_handle || "Not set"}</strong>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <form action={formAction} className="profile-edit-form form-stack">
+            {/* Photo upload from device */}
+            <div className="edit-form-block">
+              <PhotoUpload
+                value={photo}
+                onChange={setPhoto}
+                name="avatar_url"
+                label="Profile Photo (Upload from device or choose preset)"
+              />
+            </div>
+
+            {/* Full name and department */}
+            <div className="field-grid">
+              <div>
+                <label className="form-label" htmlFor="edit-name">
+                  Full Name / Username
+                </label>
+                <input
+                  id="edit-name"
+                  className={input}
+                  name="full_name"
+                  defaultValue={profile.full_name}
+                  minLength={2}
+                  maxLength={60}
+                  required
+                />
+              </div>
+              <div>
+                <label className="form-label" htmlFor="edit-major">
+                  Department
+                </label>
+                <select
+                  id="edit-major"
+                  className={input}
+                  name="major"
+                  defaultValue={profile.major}
+                  required
+                >
+                  {departments.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="field-grid">
+              <div>
+                <label className="form-label" htmlFor="edit-grad">
+                  Graduation Year
+                </label>
+                <select
+                  id="edit-grad"
+                  className={input}
+                  name="grad_year"
+                  defaultValue={profile.grad_year}
+                  required
+                >
+                  {graduationYears.map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="form-label" htmlFor="edit-status">
+                  Relationship Status
+                </label>
+                <select
+                  id="edit-status"
+                  className={input}
+                  name="status"
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as RelationshipStatus)}
+                  required
+                >
+                  {statusOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Gender & Discovery feature */}
+            <div className="field-grid">
+              <div>
+                <label className="form-label" htmlFor="edit-gender">
+                  My Gender
+                </label>
+                <select
+                  id="edit-gender"
+                  className={input}
+                  name="gender"
+                  value={gender}
+                  onChange={(e) => setGender(e.target.value as Gender)}
+                  required
+                >
+                  {genderOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="form-label" htmlFor="edit-interested">
+                  Feed Matching Mode
+                </label>
+                <select
+                  id="edit-interested"
+                  className={input}
+                  name="interested_in"
+                  value={interestedIn}
+                  onChange={(e) => setInterestedIn(e.target.value as InterestedIn)}
+                  required
+                >
+                  {interestedInOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Bio */}
+            <div>
+              <label className="form-label" htmlFor="edit-bio">
+                Bio / About You <span className="label-aside">Up to 280 characters</span>
+              </label>
+              <textarea
+                id="edit-bio"
+                className={`${input} min-h-24 resize-y`}
+                name="bio"
+                defaultValue={profile.bio}
+                maxLength={280}
+                placeholder="Tell others what you love on campus..."
+              />
+            </div>
+
+            {/* Hobbies Editing */}
+            <div className="edit-form-block">
+              <div className="section-kicker hobby-heading">
+                <Sparkles size={16} /> CAMPUS HOBBIES & INTERESTS <span>{hobbies.length}/5</span>
+              </div>
+              <p className="field-note">
+                Select or deselect what you enjoy around Siddhartha campus.
+              </p>
+              <div className="chip-grid">
+                {campusHobbies.map((hobby) => {
+                  const picked = hobbies.includes(hobby);
+                  return (
+                    <button
+                      type="button"
+                      key={hobby}
+                      className={picked ? "choice-chip is-picked" : "choice-chip"}
+                      onClick={() => toggleHobby(hobby)}
+                      aria-pressed={picked}
+                    >
+                      {picked && <Check size={13} />}
+                      {hobby}
+                    </button>
+                  );
+                })}
+              </div>
+              <input type="hidden" name="hobbies" value={JSON.stringify(hobbies)} />
+            </div>
+
+            {/* Relationship Vibes Editing */}
+            <div className="edit-form-block">
+              <div className="section-kicker">
+                <Heart size={16} /> RELATIONSHIP INTENTIONS <span>{vibes.length}/2</span>
+              </div>
+              <div className="choice-list">
+                {relationshipVibes.map((vibe) => {
+                  const picked = vibes.includes(vibe);
+                  return (
+                    <button
+                      type="button"
+                      key={vibe}
+                      className={picked ? "vibe-choice is-picked" : "vibe-choice"}
+                      onClick={() => toggleVibe(vibe)}
+                      aria-pressed={picked}
+                    >
+                      <span className="choice-check">{picked && <Check size={14} />}</span>
+                      <span className="choice-copy">
+                        <strong>{vibe}</strong>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              <input type="hidden" name="relationship_vibes" value={JSON.stringify(vibes)} />
+            </div>
+
+            {/* Contact Details */}
+            <div className="field-grid">
+              <div>
+                <label className="form-label" htmlFor="edit-contact-type">
+                  Private Contact Type
+                </label>
+                <select
+                  id="edit-contact-type"
+                  className={input}
+                  name="contact_type"
+                  defaultValue={profile.contact_type}
+                >
+                  <option value="instagram">Instagram</option>
+                  <option value="whatsapp">WhatsApp</option>
+                </select>
+              </div>
+              <div>
+                <label className="form-label" htmlFor="edit-contact-handle">
+                  Handle or WhatsApp Number
+                </label>
+                <input
+                  id="edit-contact-handle"
+                  className={input}
+                  name="contact_handle"
+                  defaultValue={profile.contact_handle}
+                  placeholder="@handle or +91..."
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="profile-edit-actions">
+              <button
+                type="button"
+                className="button button-secondary"
+                onClick={() => setIsEditing(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="button button-primary"
+                disabled={isPending}
+              >
+                <Save size={16} />
+                {isPending ? "Saving changes..." : "Save Profile"}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+
+      {/* Password Reset / Change Password Section */}
+      <PasswordResetCard />
+    </div>
+  );
+}
+
+function PasswordResetCard() {
+  const [passState, passAction, passPending] = useActionState(changePassword, {} as FormState);
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="profile-edit-section security-card">
       <div className="profile-section-header">
         <div>
-          <h2>Your Profile Details</h2>
-          <p>Keep your hobbies, relationship status, and photo fresh.</p>
+          <h2>Security & Password</h2>
+          <p>Update your account password anytime (minimum 8 characters).</p>
         </div>
         <button
           type="button"
           className="button button-secondary edit-toggle-btn"
-          onClick={() => setIsEditing(!isEditing)}
+          onClick={() => setIsOpen(!isOpen)}
         >
-          {isEditing ? (
-            <>
-              <X size={16} /> Cancel Editing
-            </>
-          ) : (
-            <>
-              <Edit3 size={16} /> Edit Profile
-            </>
-          )}
+          <KeyRound size={15} />
+          {isOpen ? "Hide Form" : "Change Password"}
         </button>
       </div>
 
-      {notice && <output className="toast">{notice}</output>}
-      {state.error && <p className="form-alert" role="alert">{state.error}</p>}
+      {isOpen && (
+        <form action={passAction} className="password-form form-stack">
+          {passState.error && (
+            <p className="form-alert" role="alert">
+              {passState.error}
+            </p>
+          )}
+          {passState.message && <output className="form-success">{passState.message}</output>}
 
-      {!isEditing ? (
-        <div className="profile-view-grid">
-          <div className="profile-card-preview">
-            <div className="info-group">
-              <span className="info-label">RELATIONSHIP STATUS</span>
-              <div className="status-badge-row">
-                <span className="status-pill is-current">
-                  {statusLabels[status]}
-                </span>
-              </div>
-            </div>
-
-            <div className="info-group">
-              <span className="info-label">GENDER & PREFERENCE</span>
-              <div className="gender-preference-tags">
-                <span className="tag-pill">
-                  {gender === "female" ? "♀ Woman" : gender === "male" ? "♂ Man" : "Non-binary"}
-                </span>
-                <span className="tag-pill highlight">
-                  Looking for: {interestedIn === "opposite" ? "Opposite gender" : interestedIn === "female" ? "Women" : interestedIn === "male" ? "Men" : "Everyone"}
-                </span>
-              </div>
-            </div>
-
-            <div className="info-group">
-              <span className="info-label">
-                CAMPUS INTERESTS & HOBBIES ({hobbies.length}/5)
-              </span>
-              <div className="tag-row hobby-tags">
-                {hobbies.length > 0 ? (
-                  hobbies.map((h) => (
-                    <span className="hobby-tag" key={h}>
-                      {h}
-                    </span>
-                  ))
-                ) : (
-                  <span className="empty-hint">No hobbies added yet. Click &quot;Edit Profile&quot; to pick some!</span>
-                )}
-              </div>
-            </div>
-
-            <div className="info-group">
-              <span className="info-label">
-                RELATIONSHIP INTENTIONS ({vibes.length}/2)
-              </span>
-              <div className="tag-row">
-                {vibes.length > 0 ? (
-                  vibes.map((v) => (
-                    <span className="vibe-tag" key={v}>
-                      {v}
-                    </span>
-                  ))
-                ) : (
-                  <span className="empty-hint">No intentions picked yet.</span>
-                )}
-              </div>
-            </div>
-
-            <div className="info-group">
-              <span className="info-label">PRIVATE CONTACT (REVEALED ON MATCH)</span>
-              <div className="contact-preview-box">
-                <LockKeyhole size={15} />
-                <span>
-                  {profile.contact_type === "instagram" ? "Instagram: " : "WhatsApp: "}
-                  <strong>{profile.contact_handle}</strong>
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <form action={formAction} className="profile-edit-form form-stack">
-          {/* Photo upload from device */}
-          <div className="edit-form-block">
-            <PhotoUpload
-              value={photo}
-              onChange={setPhoto}
-              name="avatar_url"
-              label="Profile Photo (Upload from phone/laptop or choose preset)"
-            />
-          </div>
-
-          {/* Full name and department */}
           <div className="field-grid">
             <div>
-              <label className="form-label" htmlFor="edit-name">Full Name</label>
+              <label className="form-label" htmlFor="new_password">
+                New password <span className="label-aside">8+ chars</span>
+              </label>
               <input
-                id="edit-name"
+                id="new_password"
                 className={input}
-                name="full_name"
-                defaultValue={profile.full_name}
-                minLength={2}
-                maxLength={60}
+                type="password"
+                name="new_password"
+                minLength={8}
+                maxLength={128}
+                placeholder="At least 8 characters"
                 required
               />
             </div>
             <div>
-              <label className="form-label" htmlFor="edit-major">Department</label>
-              <select
-                id="edit-major"
-                className={input}
-                name="major"
-                defaultValue={profile.major}
-                required
-              >
-                {departments.map((d) => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="field-grid">
-            <div>
-              <label className="form-label" htmlFor="edit-grad">Graduation Year</label>
-              <select
-                id="edit-grad"
-                className={input}
-                name="grad_year"
-                defaultValue={profile.grad_year}
-                required
-              >
-                {graduationYears.map((year) => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="form-label" htmlFor="edit-status">
-                Relationship Status
-              </label>
-              <select
-                id="edit-status"
-                className={input}
-                name="status"
-                value={status}
-                onChange={(e) => setStatus(e.target.value as RelationshipStatus)}
-                required
-              >
-                {statusOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Gender & Discovery feature */}
-          <div className="field-grid">
-            <div>
-              <label className="form-label" htmlFor="edit-gender">My Gender</label>
-              <select
-                id="edit-gender"
-                className={input}
-                name="gender"
-                value={gender}
-                onChange={(e) => setGender(e.target.value as Gender)}
-                required
-              >
-                {genderOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="form-label" htmlFor="edit-interested">
-                Feed Matching Mode
-              </label>
-              <select
-                id="edit-interested"
-                className={input}
-                name="interested_in"
-                value={interestedIn}
-                onChange={(e) => setInterestedIn(e.target.value as InterestedIn)}
-                required
-              >
-                {interestedInOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Bio */}
-          <div>
-            <label className="form-label" htmlFor="edit-bio">
-              Bio / About You <span className="label-aside">Up to 280 characters</span>
-            </label>
-            <textarea
-              id="edit-bio"
-              className={`${input} min-h-24 resize-y`}
-              name="bio"
-              defaultValue={profile.bio}
-              maxLength={280}
-              placeholder="Tell others what you love on campus..."
-            />
-          </div>
-
-          {/* Hobbies Editing */}
-          <div className="edit-form-block">
-            <div className="section-kicker hobby-heading">
-              <Sparkles size={16} /> CAMPUS HOBBIES & INTERESTS <span>{hobbies.length}/5</span>
-            </div>
-            <p className="field-note">
-              Select or deselect what you enjoy around Siddhartha campus.
-            </p>
-            <div className="chip-grid">
-              {campusHobbies.map((hobby) => {
-                const picked = hobbies.includes(hobby);
-                return (
-                  <button
-                    type="button"
-                    key={hobby}
-                    className={picked ? "choice-chip is-picked" : "choice-chip"}
-                    onClick={() => toggleHobby(hobby)}
-                    aria-pressed={picked}
-                  >
-                    {picked && <Check size={13} />}
-                    {hobby}
-                  </button>
-                );
-              })}
-            </div>
-            <input type="hidden" name="hobbies" value={JSON.stringify(hobbies)} />
-          </div>
-
-          {/* Relationship Vibes Editing */}
-          <div className="edit-form-block">
-            <div className="section-kicker">
-              <Heart size={16} /> RELATIONSHIP INTENTIONS <span>{vibes.length}/2</span>
-            </div>
-            <div className="choice-list">
-              {relationshipVibes.map((vibe) => {
-                const picked = vibes.includes(vibe);
-                return (
-                  <button
-                    type="button"
-                    key={vibe}
-                    className={picked ? "vibe-choice is-picked" : "vibe-choice"}
-                    onClick={() => toggleVibe(vibe)}
-                    aria-pressed={picked}
-                  >
-                    <span className="choice-check">{picked && <Check size={14} />}</span>
-                    <span className="choice-copy">
-                      <strong>{vibe}</strong>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-            <input type="hidden" name="relationship_vibes" value={JSON.stringify(vibes)} />
-          </div>
-
-          {/* Contact Details */}
-          <div className="field-grid">
-            <div>
-              <label className="form-label" htmlFor="edit-contact-type">
-                Private Contact Type
-              </label>
-              <select
-                id="edit-contact-type"
-                className={input}
-                name="contact_type"
-                defaultValue={profile.contact_type}
-              >
-                <option value="instagram">Instagram</option>
-                <option value="whatsapp">WhatsApp</option>
-              </select>
-            </div>
-            <div>
-              <label className="form-label" htmlFor="edit-contact-handle">
-                Handle or WhatsApp Number
+              <label className="form-label" htmlFor="confirm_new_password">
+                Confirm new password
               </label>
               <input
-                id="edit-contact-handle"
+                id="confirm_new_password"
                 className={input}
-                name="contact_handle"
-                defaultValue={profile.contact_handle}
-                placeholder="@handle or +91..."
+                type="password"
+                name="confirm_new_password"
+                minLength={8}
+                maxLength={128}
+                placeholder="Re-enter password"
                 required
               />
             </div>
@@ -411,19 +539,12 @@ export function EditProfileForm({ profile }: { profile: Profile }) {
 
           <div className="profile-edit-actions">
             <button
-              type="button"
-              className="button button-secondary"
-              onClick={() => setIsEditing(false)}
-            >
-              Cancel
-            </button>
-            <button
               type="submit"
               className="button button-primary"
-              disabled={isPending}
+              disabled={passPending}
             >
-              <Save size={16} />
-              {isPending ? "Saving changes..." : "Save Profile"}
+              <KeyRound size={15} />
+              {passPending ? "Updating password..." : "Update Password"}
             </button>
           </div>
         </form>
