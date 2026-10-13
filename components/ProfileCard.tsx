@@ -37,7 +37,15 @@ export function ProfileCard({ profile, onNext }: { profile: DiscoveryProfile; on
       <div className="profile-photo">
         <Image src={profile.avatar_url} alt={`${profile.full_name}'s profile`} fill unoptimized sizes="(max-width: 560px) 100vw, 460px" priority />
         <div className="photo-shade" />
-        <div className="photo-topline"><span className="status-pill">{statusLabels[profile.status]}</span><span className="campus-pill">Siddhartha · {profile.grad_year}</span></div>
+        <div className="photo-topline">
+          <span className="status-pill">{statusLabels[profile.status]}</span>
+          {profile.gender && (
+            <span className="gender-pill">
+              {profile.gender === "female" ? "♀ Woman" : profile.gender === "male" ? "♂ Man" : "Non-binary"}
+            </span>
+          )}
+          <span className="campus-pill">Siddhartha · {profile.grad_year}</span>
+        </div>
         <div className="photo-caption"><span className="photo-major">{profile.major}</span><h2>{profile.full_name}</h2></div>
       </div>
       <div className="profile-details">

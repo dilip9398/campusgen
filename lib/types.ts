@@ -12,6 +12,8 @@ export const relationshipVibes = [
 export type RelationshipVibe = (typeof relationshipVibes)[number];
 export type RelationshipStatus = "single" | "it_is_complicated" | "open_to_see";
 export type ContactType = "instagram" | "whatsapp";
+export type Gender = "male" | "female" | "other";
+export type InterestedIn = "opposite" | "female" | "male" | "all";
 
 export interface Profile {
   id: string;
@@ -21,6 +23,8 @@ export interface Profile {
   grad_year: number;
   avatar_url: string;
   bio: string;
+  gender: Gender;
+  interested_in: InterestedIn;
   status: RelationshipStatus;
   hobbies: string[];
   relationship_vibes: RelationshipVibe[];
@@ -38,6 +42,7 @@ export type DiscoveryProfile = Pick<
   | "grad_year"
   | "avatar_url"
   | "bio"
+  | "gender"
   | "status"
   | "hobbies"
   | "relationship_vibes"
@@ -64,6 +69,8 @@ export interface OnboardingPayload {
   grad_year: number;
   avatar_url: string;
   bio: string;
+  gender: Gender;
+  interested_in: InterestedIn;
   status: RelationshipStatus;
   hobbies: string[];
   relationship_vibes: RelationshipVibe[];

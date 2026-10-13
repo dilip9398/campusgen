@@ -1,39 +1,81 @@
 import { redirect } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { DiscoveryFeed } from "@/app/feed/DiscoveryFeed";
-import { departments } from "@/lib/constants";
+import { departments, genderLabels, getOppositeGender } from "@/lib/constants";
 import { relationshipVibes } from "@/lib/types";
-import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { getCurrentProfile, getFeedProfilesList } from "@/lib/auth-session";
 
 export const dynamic = "force-dynamic";
 
 export default async function FeedPage({ searchParams }: {
-  searchParams: Promise<{ department?: string; vibe?: string }>;
+  searchParams: Promise<{ department?: string; vibe?: string; gender?: string }>;
 }) {
   const params = await searchParams;
-  const department = departments.includes(params.department as (typeof departments)[number]) ? params.department! : "";
-  const vibe = relationshipVibes.includes(params.vibe as (typeof relationshipVibes)[number]) ? params.vibe! : "";
-  const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/auth");
-  const { data: myProfile } = await supabase.rpc("get_my_profile");
+  const myProfile = await getCurrentProfile();
   if (!myProfile) redirect("/auth");
 
-  const { data, error } = await supabase.rpc("get_feed_profiles", {
-    p_department: department || null,
-    p_vibe: vibe || null,
-  });
+  const department = departments.includes(params.department as (typeof departments)[number]) ? params.department! : "";
+  const vibe = relationshipVibes.includes(params.vibe as (typeof relationshipVibes)[number]) ? params.vibe! : "";
+  // Default to opposite gender feature if not specified
+  const gender = params.gender || "opposite";
 
-  return <>
-    <Navbar signedIn />
-    <main className="app-frame feed-page">
-      <div className="page-intro"><span className="eyebrow">THE SIDDHARTHA EDITION</span><h1>Meet someone<br /><em>in your orbit.</em></h1><p>Good people, same campus. Start with a hello when it feels right.</p></div>
-      <form className="filter-bar" action="/feed">
-        <label><span>Department</span><select name="department" defaultValue={department}><option value="">All departments</option>{departments.map((item) => <option key={item}>{item}</option>)}</select></label>
-        <label><span>Intentions</span><select name="vibe" defaultValue={vibe}><option value="">All vibes</option>{relationshipVibes.map((item) => <option key={item}>{item}</option>)}</select></label>
-        <button className="filter-submit" type="submit">Apply</button>
-      </form>
-      {error ? <div className="empty-state"><h2>Discovery is taking a break.</h2><p>We couldn’t load campus profiles. Please refresh in a moment.</p></div> : <DiscoveryFeed profiles={data ?? []} />}
-    </main>
-  </>;
+  const profiles = await getFeedProfilesList(myProfile, department, vibe, gender);
+
+  const opposite = getOppositeGender(myProfile.gender);
+  const oppositeText = opposite ? (opposite === "female" ? "women" : "men") : "everyone";
+
+  return (
+    <>
+      <Navbar signedIn />
+      <main className="app-frame feed-page">
+        <div className="page-intro">
+          <span className="eyebrow">THE SIDDHARTHA EDITION</span>
+          <h1>
+            Meet someone<br />
+            <em>in your orbit.</em>
+          </h1>
+          <p>
+            {gender === "opposite"
+              ? `Currently showing verified Siddhartha ${oppositeText} (${genderLabels[myProfile.gender]} profile active).`
+              : "Good people, same campus. Start with a hello when it feels right."}
+          </p>
+        </div>
+
+        <form className="filter-bar" action="/feed">
+          <label>
+            <span>Gender Match</span>
+            <select name="gender" defaultValue={gender}>
+              <option value="opposite">Opposite gender ({oppositeText})</option>
+              <option value="female">Women only</option>
+              <option value="male">Men only</option>
+              <option value="all">All genders</option>
+            </select>
+          </label>
+          <label>
+            <span>Department</span>
+            <select name="department" defaultValue={department}>
+              <option value="">All departments</option>
+              {departments.map((item) => (
+                <option key={item}>{item}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>Intentions</span>
+            <select name="vibe" defaultValue={vibe}>
+              <option value="">All vibes</option>
+              {relationshipVibes.map((item) => (
+                <option key={item}>{item}</option>
+              ))}
+            </select>
+          </label>
+          <button className="filter-submit" type="submit">
+            Apply
+          </button>
+        </form>
+
+        <DiscoveryFeed profiles={profiles} />
+      </main>
+    </>
+  );
 }

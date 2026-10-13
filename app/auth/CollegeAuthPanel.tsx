@@ -1,8 +1,8 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { ArrowRight, LockKeyhole } from "lucide-react";
-import { resendSignupOtp, sendSignupOtp, signInWithPassword, verifySignupOtp } from "@/app/auth/actions";
+import { ArrowRight, LockKeyhole, Sparkles } from "lucide-react";
+import { quickDemoLogin, resendSignupOtp, sendSignupOtp, signInWithPassword, verifySignupOtp } from "@/app/auth/actions";
 import type { FormState } from "@/app/auth/actions";
 
 type AuthMode = "signup" | "signin";
@@ -90,6 +90,10 @@ function CredentialsForm({ mode, action, state, pending, initialBirthDate, verif
     {state.error && <p className="form-alert" role="alert">{state.error}</p>}
     {state.message && <output className="form-success">{state.message}</output>}
     <button className="button button-primary button-wide" type="submit" disabled={pending}>{submitLabel}<ArrowRight size={17} aria-hidden="true" /></button>
+    <div className="demo-auth-divider"><span>OR TEST THE APP</span></div>
+    <button formAction={quickDemoLogin} type="submit" className="button button-secondary button-wide">
+      <Sparkles size={16} /> Instant Demo Account
+    </button>
     <p className="auth-footnote"><LockKeyhole size={14} aria-hidden="true" /> Your email is verified, never shown on your profile.</p>
   </form>;
 }

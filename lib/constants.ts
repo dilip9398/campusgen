@@ -1,4 +1,4 @@
-import type { RelationshipStatus } from "@/lib/types";
+import type { Gender, InterestedIn, RelationshipStatus } from "@/lib/types";
 
 export const departments = ["CSE", "IT", "ECE", "EEE", "Mech", "Civil", "Biotech", "MBA", "MCA"] as const;
 export const graduationYears = [2025, 2026, 2027, 2028, 2029] as const;
@@ -16,6 +16,31 @@ export const campusHobbies = [
 ] as const;
 export const avatarPresets = ["Aarav", "Mira", "Kavi", "Nila"] as const;
 
+export const genderOptions: { value: Gender; label: string }[] = [
+  { value: "female", label: "Female" },
+  { value: "male", label: "Male" },
+  { value: "other", label: "Non-binary / Other" },
+];
+
+export const genderLabels: Record<Gender, string> = {
+  male: "Male",
+  female: "Female",
+  other: "Non-binary",
+};
+
+export const interestedInOptions: { value: InterestedIn; label: string }[] = [
+  { value: "opposite", label: "Opposite gender" },
+  { value: "female", label: "Women" },
+  { value: "male", label: "Men" },
+  { value: "all", label: "Everyone" },
+];
+
+export function getOppositeGender(gender: Gender): Gender | null {
+  if (gender === "male") return "female";
+  if (gender === "female") return "male";
+  return null;
+}
+
 export const statusLabels: Record<RelationshipStatus, string> = {
   single: "Single",
   it_is_complicated: "It's complicated",
@@ -25,3 +50,4 @@ export const statusLabels: Record<RelationshipStatus, string> = {
 export function avatarUrl(seed: string) {
   return `https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(seed)}&backgroundColor=f8d8d8,c1e5de,ffdf9e,e3d9fc`;
 }
+

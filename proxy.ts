@@ -18,7 +18,11 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  await supabase.auth.getUser();
+  try {
+    await supabase.auth.getUser();
+  } catch {
+    // Gracefully continue if Supabase is temporarily unreachable
+  }
   return response;
 }
 

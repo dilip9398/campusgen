@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { AuthWizard } from "@/app/auth/AuthWizard";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { getCurrentProfile } from "@/lib/auth-session";
 
 export const dynamic = "force-dynamic";
 
@@ -8,6 +9,9 @@ export default async function AuthPage({ searchParams }: {
   searchParams: Promise<{ error?: string }>;
 }) {
   const params = await searchParams;
+  const current = await getCurrentProfile();
+  if (current) redirect("/feed");
+
   let initialPhase: 1 | 2 = 1;
   let birthDate = "";
 
@@ -17,8 +21,6 @@ export default async function AuthPage({ searchParams }: {
       const { data: { user } } = await supabase.auth.getUser();
       if (user?.email_confirmed_at) {
         initialPhase = 2;
-        const { data: profile } = await supabase.rpc("get_my_profile");
-        if (profile) redirect("/feed");
         const metadataBirthDate = user.user_metadata?.birth_date;
         if (typeof metadataBirthDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(metadataBirthDate)) {
           birthDate = metadataBirthDate;
